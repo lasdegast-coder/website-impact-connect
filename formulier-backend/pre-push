@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 #
-# Wordt door git aangeroepen bij 'git push'.
+# Wordt door git aangeroepen bij 'git push'. Doet twee dingen.
 #
-# Alleen als er iets aan de backend is veranderd gaat die mee naar Google.
+# 1. Kijkt of de JavaScript-bestanden van de site nog te lezen zijn. Eén
+#    vergeten komma in data.js en een hele lijst verdwijnt van de site, en
+#    omdat een push meteen live staat merkt niemand het tot een bezoeker het
+#    ziet. Dan liever dat de push stopt.
+#
+# 2. Alleen als er iets aan de backend is veranderd gaat die mee naar Google.
 # Verander je alleen de website, dan gebeurt hier niets en duurt pushen net
 # zo lang als altijd.
 #
@@ -14,6 +19,29 @@ set -euo pipefail
 
 REPO="$(git rev-parse --show-toplevel)"
 BACKEND="formulier-backend"
+
+# ── 1. zijn de scripts van de site nog heel? ──────────────────────────
+if command -v node >/dev/null 2>&1; then
+  KAPOT=0
+  for bestand in "$REPO"/*.js; do
+    if ! FOUT="$(node --check "$bestand" 2>&1)"; then
+      echo >&2
+      echo "✗ $(basename "$bestand") bevat een fout, dus de push is gestopt." >&2
+      echo "$FOUT" | sed -n '1,3p' | sed 's/^/    /' >&2
+      KAPOT=1
+    fi
+  done
+  if [ "$KAPOT" -eq 1 ]; then
+    echo >&2
+    echo "  Op de regel hierboven, of vlak ervoor, mist meestal een komma," >&2
+    echo "  een aanhalingsteken of een haakje. Herstel het en push opnieuw." >&2
+    exit 1
+  fi
+else
+  echo "▸ Node staat niet op deze computer; de scripts zijn niet gecontroleerd."
+fi
+
+# ── 2. de backend ──────────────────────────────────────────────────────
 
 # Wat gaat er mee in deze push? git geeft de commits door op stdin.
 VERANDERD=0

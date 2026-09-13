@@ -25,7 +25,7 @@ uitleg_bij_fout() {
   elif grep -qi "invalid credentials\|unauthorized\|login" "$1"; then
     echo
     echo "✗ De inlog is verlopen. Log opnieuw in met:" >&2
-    echo "    npx @google/clasp login" >&2
+    echo "    npx --yes @google/clasp@2.4.2 login" >&2
   else
     tail -20 "$1" >&2
   fi

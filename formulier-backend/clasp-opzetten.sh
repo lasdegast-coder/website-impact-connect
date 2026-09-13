@@ -3,7 +3,10 @@
 # Eenmalige koppeling tussen deze map en het Apps Script-project.
 # Daarna is `git push` genoeg: de pre-push hook stuurt de backend mee.
 #
-#   ./formulier-backend/clasp-opzetten.sh
+#   ./formulier-backend/clasp-opzetten.sh [Script-ID]
+#
+# De Script-ID staat in de Apps Script-editor onder het tandwiel
+# (Projectinstellingen). Geef je hem mee, dan wordt er niet naar gevraagd.
 #
 set -euo pipefail
 
@@ -13,7 +16,7 @@ REPO="$(cd "$HIER/.." && pwd)"
 
 echo "▸ Stap 1 van 4: inloggen bij Google"
 if [ -f "$HOME/.clasprc.json" ]; then
-  echo "  Je bent al ingelogd. (Ander account nodig? Voer eerst 'npx @google/clasp logout' uit.)"
+  echo "  Je bent al ingelogd. (Ander account nodig? Voer eerst '$CLASP logout' uit.)"
 else
   echo "  Er opent een browservenster. Kies het account dat het script beheert."
   $CLASP login
@@ -22,10 +25,15 @@ fi
 echo
 echo "▸ Stap 2 van 4: welk Apps Script-project?"
 BEKEND=""
-if [ -f "$HIER/.clasp.json" ]; then
+SCRIPT_ID="${1:-}"
+if [ -n "$SCRIPT_ID" ]; then
+  echo "  Meegegeven: $SCRIPT_ID"
+elif [ -f "$HIER/.clasp.json" ]; then
   BEKEND="$(sed -n 's/.*"scriptId":"\([^"]*\)".*/\1/p' "$HIER/.clasp.json")"
 fi
-if [ -n "$BEKEND" ]; then
+if [ -n "$SCRIPT_ID" ]; then
+  :
+elif [ -n "$BEKEND" ]; then
   echo "  Al bekend: $BEKEND"
   read -r -p "  Enter om deze te houden, of plak een andere Script-ID: " SCRIPT_ID
   SCRIPT_ID="${SCRIPT_ID:-$BEKEND}"
@@ -89,13 +97,22 @@ echo "▸ Stap 4 van 4: welke implementatie is de live webapp?"
 # In de map met .clasp.json draaien, anders weet clasp niet welk project je
 # bedoelt. En als het opvragen mislukt mag dat de opzet niet afbreken: de
 # implementatie-ID kun je ook met de hand invullen.
-( cd "$HIER" && $CLASP deployments 2>&1 || true ) | sed 's/^/  /'
-echo
-echo "  Hierboven staan de implementaties. De live webapp is meestal die met"
-echo "  een omschrijving, niet die met @HEAD."
-echo "  Zie je hier niets bruikbaars, kijk dan in de editor onder"
-echo "  Implementeren → Implementaties beheren."
-read -r -p "  Implementatie-ID (leeg laten = alleen code pushen, niet uitrollen): " DEPLOY_ID
+#
+# De site roept de webapp aan via FORM_ENDPOINT in data.js, en de ID zit in
+# dat adres. Dat is dus per definitie de goede; alleen als hij daar niet te
+# vinden is vragen we erom.
+DEPLOY_ID="$(sed -n 's|.*FORM_ENDPOINT *= *"https://script.google.com/macros/s/\([^/"]*\)/exec".*|\1|p' "$REPO/data.js")"
+if [ -n "$DEPLOY_ID" ]; then
+  echo "  Uit FORM_ENDPOINT in data.js: $DEPLOY_ID"
+else
+  ( cd "$HIER" && $CLASP deployments 2>&1 || true ) | sed 's/^/  /'
+  echo
+  echo "  Hierboven staan de implementaties. De live webapp is meestal die met"
+  echo "  een omschrijving, niet die met @HEAD."
+  echo "  Zie je hier niets bruikbaars, kijk dan in de editor onder"
+  echo "  Implementeren → Implementaties beheren."
+  read -r -p "  Implementatie-ID (leeg laten = alleen code pushen, niet uitrollen): " DEPLOY_ID
+fi
 if [ -n "$DEPLOY_ID" ]; then
   echo "$DEPLOY_ID" > "$HIER/.clasp-deployment"
   echo "  Opgeslagen."

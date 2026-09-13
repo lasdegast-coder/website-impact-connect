@@ -189,13 +189,11 @@ zijde van het origineel. De uitsnede wordt vanuit het midden gemaakt.)
 
 ## Online zetten
 
-Het is een statische site, dus elke webhost werkt. Sleep de map naar **Netlify Drop**,
-**Vercel** of **Cloudflare Pages**, of zet de bestanden via GitHub Pages online
-(zoals bij Thermal Compost Systems). `serve.py`, `formulier-backend/` en deze README
-hoeven niet mee.
+De site staat op **impactconnectutrecht.com**, via GitHub Pages vanuit de repo
+`lasdegast-coder/website-preof`. Elke push naar `main` staat binnen een minuut live.
 
-Voor een eigen domein op GitHub Pages: maak een bestand `CNAME` met daarin alleen
-de domeinnaam.
+Werk je hier met iemand samen, lees dan eerst `CLAUDE.md`. Daar staat hoe je
+voorkomt dat je elkaars werk overschrijft, en wat er al eens is misgegaan.
 
 ---
 
