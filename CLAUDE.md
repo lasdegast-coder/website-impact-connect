@@ -25,7 +25,7 @@ bouwen.
 
 ## Hoe iets live komt
 
-- De repo is `github.com/lasdegast-coder/website-preof`, branch `main`.
+- De repo is `github.com/lasdegast-coder/website-impact-connect`, branch `main`.
   GitHub Pages zet elke push binnen een minuut op **impactconnectutrecht.com**.
   Er zit geen controle tussen: gepusht is live.
 - Bekijk het eerst lokaal: `python3 serve.py`, dan http://127.0.0.1:8124.

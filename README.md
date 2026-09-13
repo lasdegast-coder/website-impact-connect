@@ -190,7 +190,7 @@ zijde van het origineel. De uitsnede wordt vanuit het midden gemaakt.)
 ## Online zetten
 
 De site staat op **impactconnectutrecht.com**, via GitHub Pages vanuit de repo
-`lasdegast-coder/website-preof`. Elke push naar `main` staat binnen een minuut live.
+`lasdegast-coder/website-impact-connect`. Elke push naar `main` staat binnen een minuut live.
 
 Werk je hier met iemand samen, lees dan eerst `CLAUDE.md`. Daar staat hoe je
 voorkomt dat je elkaars werk overschrijft, en wat er al eens is misgegaan.
