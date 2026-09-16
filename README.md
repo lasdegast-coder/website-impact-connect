@@ -159,18 +159,24 @@ lopende logoband op de homepage. Is het logo wit, zet de naam er dan ook bij in
 `PROGRAMME_LOGOS_ON_DARK`, dan krijgt het een donker vlakje eronder. Staat er een kolom
 `Logo` in de sheet, dan gaat die voor op deze lijst.
 
-**De programma's komen live uit een Google Sheet.** In `data.js` staat
-`PROGRAMME_SHEETS` met per categorie het adres van een gepubliceerd tabblad. Je past
-de sheet aan, de bezoeker ververst, en de wijziging staat erop — `data.js` hoeft niet
-mee. Een categorie met een leeg adres komt uit `PROGRAMMES_DATA` in dit bestand, en
-gaat het ophalen mis, dan valt de site daar automatisch op terug zodat de pagina nooit
-leeg is.
+**De programma's komen live uit een Google Sheet.** Dat is *LINKED TO WEBSITE
+Programmes Database (Google Sheets)*, van het contact@-account, met per categorie een
+tabblad. Je past de sheet aan, de bezoeker ververst, en de wijziging staat erop —
+`data.js` hoeft niet mee. In `data.js` staat alleen het nummer van de sheet en per
+categorie het nummer van het tabblad. Een categorie met een lege regel komt uit
+`PROGRAMMES_DATA` in dit bestand, en gaat het ophalen mis, dan valt de site daar
+automatisch op terug zodat de pagina nooit leeg is.
 
-Een tabblad toevoegen: publiceer het (Bestand → Delen → Publiceren op internet →
-tabblad → CSV), plak het adres in `PROGRAMME_SHEETS` en zet de categorie erbij in
-`PROGRAMME_CATS` ernaast. De kopregel moet `Programme Name | Description | Sign up
-date | Duration | Language | Experience level | URL | Location | Costs` zijn; de
-volgorde van de kolommen maakt niet uit.
+De site leest de tabbladen rechtstreeks; publiceren op internet hoeft niet. Wel moet
+de sheet op **Iedereen met de link → Viewer** blijven staan. Zet iemand dat uit, dan
+verdwijnen de nieuwste programma's stilletjes en toont de site de lijst uit
+`PROGRAMMES_DATA`.
+
+Een tabblad toevoegen: open het in de sheet, neem het nummer achter `gid=` uit de
+adresbalk over in `PROGRAMME_SHEETS` en zet de categorie erbij in `PROGRAMME_CATS`
+ernaast. De kopregel moet `Programme Name | Description | Sign up date | Duration |
+Language | Experience level | URL | Location | Costs` zijn; de volgorde van de
+kolommen maakt niet uit.
 
 **Een teamlid wijzigen** — het team staat als gewone HTML onderaan `about.html`,
 onder "The people you'll meet". Naam, functie en foto staan bij elkaar in één blokje.

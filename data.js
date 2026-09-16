@@ -311,14 +311,22 @@ const PROGRAMME_CATS = [
 /* ═══════════════════════════════════════════════════════════════════
    LIVE KOPPELING MET DE GOOGLE SHEET
    ═══════════════════════════════════════════════════════════════════
-   Per categorie het adres van het bijbehorende tabblad, gepubliceerd
-   als CSV. Zo kom je aan zo'n adres:
+   De programma's staan in één Google Sheet, met per categorie een
+   tabblad:
 
-     Bestand → Delen → Publiceren op internet
-     → kies het tabblad (niet "Heel document")
-     → kies "Door komma's gescheiden waarden (.csv)"
-     → vink "Automatisch opnieuw publiceren" aan
-     → Publiceren, en kopieer het adres
+     LINKED TO WEBSITE Programmes Database (Google Sheets)
+     https://docs.google.com/spreadsheets/d/1jIjZ15sPo5i6OIOW4dlv1kAlTT-2qObawFDdMUF4Ejc/edit
+
+   Je past de sheet aan, de bezoeker ververst, en de wijziging staat op
+   de site. Publiceren hoeft niet; de site leest het tabblad
+   rechtstreeks. Daarvoor moet de sheet wél op "Iedereen met de link →
+   Viewer" blijven staan. Zet je dat uit, dan valt de site terug op
+   PROGRAMMES_DATA hieronder en verdwijnen de nieuwste programma's
+   stilletjes.
+
+   Een tabblad erbij? Open het in de sheet en kijk in de adresbalk:
+   achter "gid=" staat het nummer van dat tabblad. Zet dat nummer
+   hieronder neer en de categorie erbij in PROGRAMME_CATS hierboven.
 
    Een regel leeg laten kan: die categorie komt dan uit PROGRAMMES_DATA
    hieronder. Gaat het ophalen mis, dan valt de site daar ook op terug,
@@ -328,19 +336,23 @@ const PROGRAMME_CATS = [
      Programme Name | Description | Sign up date | Duration |
      Language | Experience level | URL | Location | Costs
    ═══════════════════════════════════════════════════════════════════ */
+const PROGRAMME_SHEET = "1jIjZ15sPo5i6OIOW4dlv1kAlTT-2qObawFDdMUF4Ejc";
+const tabblad = (gid) =>
+  `https://docs.google.com/spreadsheets/d/${PROGRAMME_SHEET}/export?format=csv&gid=${gid}`;
+
 const PROGRAMME_SHEETS = {
-  volunteer:  "https://docs.google.com/spreadsheets/d/e/2PACX-1vRMzMnCAEbQ-m2oJAU7IFS2iNoQhpu6S39UkyVuDSwBaeWOC9vKmIyxkKw31IfpXA/pub?gid=562032160&single=true&output=csv",   // tabblad "volunteer work"
-  youth:      "https://docs.google.com/spreadsheets/d/e/2PACX-1vRMzMnCAEbQ-m2oJAU7IFS2iNoQhpu6S39UkyVuDSwBaeWOC9vKmIyxkKw31IfpXA/pub?gid=1221317339&single=true&output=csv",  // tabblad "Youth organizations"
-  impact:     "https://docs.google.com/spreadsheets/d/e/2PACX-1vRMzMnCAEbQ-m2oJAU7IFS2iNoQhpu6S39UkyVuDSwBaeWOC9vKmIyxkKw31IfpXA/pub?gid=1914001672&single=true&output=csv",  // tabblad "Impact driven programmes"
-  university: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRMzMnCAEbQ-m2oJAU7IFS2iNoQhpu6S39UkyVuDSwBaeWOC9vKmIyxkKw31IfpXA/pub?gid=1861492196&single=true&output=csv",  // tabblad "Programs from other universities"
-  paid:       "https://docs.google.com/spreadsheets/d/e/2PACX-1vRMzMnCAEbQ-m2oJAU7IFS2iNoQhpu6S39UkyVuDSwBaeWOC9vKmIyxkKw31IfpXA/pub?gid=1646247199&single=true&output=csv",  // tabblad "paid impact programmes"
+  volunteer:  tabblad(562032160),    // tabblad "Volunteer work"
+  youth:      tabblad(1221317339),   // tabblad "Youth Organizations"
+  impact:     tabblad(1914001672),   // tabblad "Impact Driven Programmes"
+  university: tabblad(1861492196),   // tabblad "Programs from other university"
+  paid:       tabblad(1646247199),   // tabblad "Paid Impact Programmes"
 
-  // Nog niet in gebruik: tabblad "summer school programmes"
-  // (gid 6575484) bevat op dit moment alleen NAHSS, en die staat ook al
-  // in "Impact driven programmes". Zodra er meer in staat: hier een regel
-  // toevoegen en de categorie erbij zetten in PROGRAMME_CATS hierboven.
+  // Nog niet in gebruik: tabblad "Summer School Programmes" (gid 6575484).
+  // Daar staan inmiddels 36 programma's in, maar de kopregel is anders
+  // (School + Programme/course in plaats van Programme Name). Zodra we
+  // dat tabblad willen tonen: kolomnamen gelijktrekken, hier een regel
+  // toevoegen en de categorie erbij zetten in PROGRAMME_CATS.
 };
-
 /* ═══════════════════════════════════════════════════════════════════
    LOGO'S BIJ PROGRAMMA'S
    ═══════════════════════════════════════════════════════════════════
