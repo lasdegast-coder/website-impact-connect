@@ -53,6 +53,10 @@ const FORM_ENDPOINT = "https://script.google.com/macros/s/AKfycbyziDZqzeT_rYUhrI
    de knoppen op de site, de fallback-mails en de bevestigingen. */
 const CONTACT_MAIL = "contact@impactconnectutrecht.com";
 
+/* Het rooster voor gesprekken (welke dagen, wie, hoe ver vooruit) staat niet
+   hier maar in formulier-backend/Gesprekken.gs, want de backend bepaalt en
+   controleert welke tijden vrij zijn. */
+
 const THEMES = [
   { id: "all", label: "All themes", color: "#13352A" },
   { id: "energy", label: "Energy", color: "#C2683A" },

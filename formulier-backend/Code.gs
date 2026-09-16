@@ -16,6 +16,9 @@
         zodat je meteen op "Beantwoorden" kunt drukken
      3. mailt de student een bevestiging met wat hij heeft ingevuld
 
+   Kiest de student bij een afspraak een tijdslot, dan zet het script het
+   gesprek eerst in de agenda "Gesprekken". Dat staat in Gesprekken.gs.
+
    De tabbladen en de kolommen maakt het script zelf aan. Komt er later
    een vraag bij in een formulier, dan zet het script die kolom er vanzelf
    achter; je hoeft de sheet nooit met de hand bij te werken.
@@ -85,6 +88,8 @@ const VRAGEN = {
     { sleutel: 'tijd',      label: 'Time they can commit' },
     { sleutel: 'betaald',   label: 'Paid or unpaid' },
     { sleutel: 'taal',      label: 'Language' },
+    // Deze zet het script zelf (zie doPost), niet de browser.
+    { sleutel: 'tijdslotTekst', label: 'Time slot' },
     { sleutel: 'notities',  label: 'Anything else' },
   ],
   contact: [
@@ -139,16 +144,39 @@ function doPost(e) {
       return antwoord({ ok: false, fout: 'Dat e-mailadres klopt niet.' });
     }
 
-    // De teller en de sheet zijn allebei "lezen, veranderen, terugschrijven".
-    // Komen er twee aanvragen op precies hetzelfde moment binnen, dan mogen
-    // die elkaar daarbij niet in de weg zitten: dan telt de rem verkeerd of
-    // schrijven ze allebei een koprij. Vandaar het slot.
-    const ruimte = metSlot(function () {
-      if (!binnenDagLimiet()) return false;
+    // Het tijdslot zetten we zelf in de mail en de sheet, met of het echt in
+    // de agenda staat. Wat de browser hier meestuurt telt niet.
+    d.tijdslotTekst = '';
+    let boeking = null;
+
+    // De teller, de sheet en de agenda zijn alle drie "lezen, veranderen,
+    // terugschrijven". Komen er twee aanvragen op precies hetzelfde moment
+    // binnen, dan mogen die elkaar niet in de weg zitten: dan telt de rem
+    // verkeerd, schrijven ze allebei een koprij, of krijgen twee studenten
+    // hetzelfde tijdslot. Vandaar het slot.
+    const uitkomst = metSlot(function () {
+      if (!binnenDagLimiet()) return 'limiet';
+      if (soort === 'afspraak' && d.tijdslot) {
+        try {
+          boeking = gesprekBoeken(d);
+        } catch (err) {
+          console.error(err);
+          boeking = { status: 'mislukt', tekst: d.tijdslot, reden: 'fout bij het boeken' };
+        }
+        if (boeking.status === 'bezet') return 'bezet';
+      }
+      if (soort === 'afspraak' && Object.prototype.hasOwnProperty.call(d, 'tijdslot')) {
+        d.tijdslotTekst = !boeking ? 'None of the times worked'
+          : boeking.status === 'geboekt' ? boeking.tekst + ' (in de agenda)'
+          : boeking.tekst + ' (NIET in de agenda: ' + boeking.reden + ')';
+      }
       schrijfInBlad(soort, d);
-      return true;
+      return 'ok';
     });
-    if (!ruimte) return antwoord({ ok: false, fout: 'Te veel aanvragen vandaag.' });
+    if (uitkomst === 'limiet') return antwoord({ ok: false, fout: 'Te veel aanvragen vandaag.' });
+    // Net door iemand anders gekozen: de site laat de student een ander
+    // tijdstip kiezen, met de nieuwe stand erbij.
+    if (uitkomst === 'bezet') return antwoord({ ok: false, fout: 'bezet', tijden: gesprekTijden() });
 
     mailNaarOns(soort, d);
 
@@ -156,9 +184,23 @@ function doPost(e) {
     // Gaat die mis, dan staat de aanvraag al in de sheet en ligt hij al bij
     // ons in de mail; dan hoort de student niet alsnog "er ging iets mis" te
     // zien en zijn aanvraag voor de tweede keer te versturen.
-    try { mailNaarStudent(soort, d); } catch (err) { console.error(err); }
+    const geboekt = !!(boeking && boeking.status === 'geboekt');
+    try {
+      // In de mail aan de student staat het gesprek bovenaan; de regel met
+      // "(in de agenda)" is voor ons.
+      d.tijdslotTekst = '';
+      mailNaarStudent(soort, d, geboekt ? [
+        'Thanks for reaching out. Your conversation is booked:',
+        '',
+        '    ' + boeking.tekst,
+        '    ' + GESPREK_PLEK,
+        '',
+        'A calendar invitation is on its way in a separate email. Can\'t make it',
+        'after all? Just reply to this mail and we\'ll find another time.',
+      ] : null);
+    } catch (err) { console.error(err); }
 
-    return antwoord({ ok: true });
+    return antwoord({ ok: true, geboekt: geboekt });
   } catch (err) {
     // De echte fout blijft in het logboek van Apps Script staan (Uitvoeringen).
     // Naar buiten gaat alleen dat het misging: de bezoeker heeft niets aan de
@@ -182,6 +224,9 @@ function doGet(e) {
     return ContentService.createTextOutput(alumniJson(p.test === '1', p.vers === '1'))
       .setMimeType(ContentService.MimeType.JSON);
   }
+
+  // De vrije tijdsloten voor een gesprek; zie Gesprekken.gs.
+  if (p.lijst === 'tijden') return antwoord(gesprekTijden());
 
   // De pagina achter een knop uit onze eigen mail. Hij toont alleen wat er
   // gaat gebeuren; pas de knop op die pagina voert het uit.
@@ -305,12 +350,14 @@ function mailNaarOns(soort, d) {
 }
 
 /* ---- de bevestiging aan de student -------------------------------- */
-function mailNaarStudent(soort, d) {
+/* bevestiging: eigen openingstekst, bijvoorbeeld als er een gesprek is
+   geboekt. Zonder komt de vaste tekst uit FORMULIEREN. */
+function mailNaarStudent(soort, d, bevestiging) {
   const cfg = FORMULIEREN[soort];
   const voornaam = tekstOf(d.naam, 'there').split(' ')[0];
 
   const regels = ['Hi ' + voornaam + ',', '']
-    .concat(cfg.bevestiging)
+    .concat(bevestiging || cfg.bevestiging)
     .concat([
       '',
       'This is what you sent us:',

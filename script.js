@@ -1401,7 +1401,14 @@ function mailtoFallback(subject, body) {
      ervan uit dat het gelukt is; anders zou de bezoeker een foutmelding
      krijgen voor iets dat wél is aangekomen. */
 function sendForm(payload) {
-  if (!FORM_ENDPOINT) return Promise.resolve(false);
+  return sendFormAntwoord(payload).then((d) => d === undefined || !!(d && d.ok));
+}
+
+/* Zelfde, maar met het hele antwoord van de backend. undefined betekent:
+   geen antwoord binnen de tijdslimiet (waarschijnlijk wel aangekomen),
+   null betekent: mislukt. */
+function sendFormAntwoord(payload, tijdslimietMs = 8000) {
+  if (!FORM_ENDPOINT) return Promise.resolve(null);
 
   const verstuurd = fetch(FORM_ENDPOINT, {
     method: "POST",
@@ -1409,11 +1416,36 @@ function sendForm(payload) {
     body: JSON.stringify(payload),
   })
     .then((res) => res.json())
-    .then((d) => !!(d && d.ok))
-    .catch(() => false);
+    .catch(() => null);
 
-  const tijdslimiet = new Promise((res) => setTimeout(() => res(true), 8000));
+  const tijdslimiet = new Promise((res) => setTimeout(() => res(undefined), tijdslimietMs));
   return Promise.race([verstuurd, tijdslimiet]);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TIJDSLOTEN VOOR EEN GESPREK
+   ═══════════════════════════════════════════════════════════════════
+   De vrije tijden komen uit de agenda "Gesprekken", via de backend. Het
+   rooster, de 48 uur en het maximum per dag staan daar ook: in
+   formulier-backend/Gesprekken.gs. De site toont alleen wat de backend
+   teruggeeft, en de backend controleert bij het versturen nog een keer of
+   het tijdstip echt vrij is. */
+const tweeCijfers = (n) => String(n).padStart(2, "0");
+function slotVanSleutel(k) {
+  const [datum, tijd] = k.split("T");
+  const [j, m, d] = datum.split("-").map(Number);
+  return new Date(j, m - 1, d, Number(tijd.slice(0, 2)));
+}
+
+// Geeft de tijden, of null als dat niet lukt (dan kan de student toch verder).
+function haalTijden() {
+  if (!FORM_ENDPOINT) return Promise.resolve(null);
+  const verzoek = fetch(FORM_ENDPOINT + "?lijst=tijden", { cache: "no-store" })
+    .then((res) => res.json())
+    .then((d) => (d && d.ok && Array.isArray(d.dagen) ? d : null))
+    .catch(() => null);
+  const tijdslimiet = new Promise((res) => setTimeout(() => res(null), 10000));
+  return Promise.race([verzoek, tijdslimiet]);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1425,9 +1457,45 @@ const VELD_ANDERS = "Something else";
 
 function openForm() {
   if ($("#form-root")) return;
-  const steps = ["afspr.stap1", "afspr.stap2", "afspr.stap3", "afspr.stap4"].map(t);
-  const data = { types: [], fields: [], fieldOther: "", level: "", commit: "", paid: "", lang: "", name: "", email: "", notes: "" };
+  const steps = ["afspr.stap1", "afspr.stap2", "afspr.stap3", "afspr.staptijd", "afspr.stap4"].map(t);
+  const data = { types: [], fields: [], fieldOther: "", level: "", commit: "", paid: "", lang: "", slot: "", name: "", email: "", notes: "" };
   let step = 0, done = false, sending = false, viaMail = false;
+
+  // Tijdsloten. tijden: undefined = nog aan het laden, null = ophalen
+  // mislukt, anders het antwoord van de backend. data.slot "geen" betekent
+  // dat geen van de tijden past.
+  let tijden, weken = [], weekNr = 0, slotWeg = false, geboekt = false, onbekend = false;
+  const locale = TAAL === "nl" ? "nl-NL" : "en-GB";
+  function zetTijden(antw) {
+    tijden = antw;
+    weken = [];
+    ((antw && antw.dagen) || []).forEach((dag) => {
+      const datum = slotVanSleutel(dag.datum + "T12:00");
+      const maandag = new Date(datum.getFullYear(), datum.getMonth(), datum.getDate() - ((datum.getDay() + 6) % 7));
+      let week = weken.find((w) => w.maandag.getTime() === maandag.getTime());
+      if (!week) weken.push(week = { maandag, dagen: [] });
+      week.dagen.push({ ...dag, datum });
+    });
+    weekNr = Math.min(weekNr, Math.max(weken.length - 1, 0));
+    // Lukt het ophalen niet, dan kan de student toch verder en mailen wij.
+    if (!antw && !data.slot) data.slot = "geen";
+  }
+  haalTijden().then((antw) => { zetTijden(antw); if (step === 3 && !done) render(); });
+
+  const datumTekst = (d, opties) => d.toLocaleDateString(locale, opties);
+  const weekTekst = (w) => {
+    const a = w.dagen[0].datum, b = w.dagen[w.dagen.length - 1].datum;
+    if (a.getTime() === b.getTime()) return datumTekst(a, { day: "numeric", month: "short" });
+    return a.getMonth() === b.getMonth()
+      ? `${a.getDate()}–${datumTekst(b, { day: "numeric", month: "short" })}`
+      : `${datumTekst(a, { day: "numeric", month: "short" })} – ${datumTekst(b, { day: "numeric", month: "short" })}`;
+  };
+  const uurTekst = (d, min = "00") => `${tweeCijfers(d.getHours())}:${min}`;
+  const momentTekst = (sleutel) => {
+    const d = slotVanSleutel(sleutel);
+    const plek = tijden && tijden.plek ? ` · ${tijden.plek}` : "";
+    return `${datumTekst(d, { weekday: "long", day: "numeric", month: "long" })}, ${uurTekst(d)}–${uurTekst(d, "30")}${plek}`;
+  };
 
   const wrap = document.createElement("div");
   wrap.id = "form-root";
@@ -1436,7 +1504,8 @@ function openForm() {
   const canNext = () => step === 0 ? data.types.length > 0
     : step === 1 ? data.fields.length > 0
       && (!data.fields.includes(VELD_ANDERS) || !!data.fieldOther.trim())
-    : step === 3 ? !!(data.name && data.email) : true;
+    : step === 3 ? !!data.slot
+    : step === 4 ? !!(data.name && data.email) : true;
 
   // de keuzes uit stap 1 staan als id in data; in de mail en de sheet
   // hoort het label te staan waar de student op geklikt heeft
@@ -1454,6 +1523,8 @@ function openForm() {
     tijd: data.commit,
     betaald: data.paid,
     taal: data.lang,
+    tijdslot: data.slot && data.slot !== "geen" ? data.slot : "",
+    tijdslotTekst: data.slot && data.slot !== "geen" ? momentTekst(data.slot) : t("tijd.geen"),
     notities: data.notes.trim(),
   });
 
@@ -1468,6 +1539,7 @@ function openForm() {
       p.tijd ? `Time they can commit: ${p.tijd}` : null,
       p.betaald ? `Paid or unpaid: ${p.betaald}` : null,
       p.taal ? `Language: ${p.taal}` : null,
+      `Time slot: ${p.tijdslotTekst}`,
       "",
       "STUDENT",
       `Name: ${p.naam}`,
@@ -1515,6 +1587,28 @@ function openForm() {
         ${group("lang", t("afspr.taal"), ["English", "Dutch", "Either"])}
       </div>`;
     }
+    if (step === 3) {
+      const week = weken[weekNr];
+      const weg = slotWeg ? `<p class="tijd-weg">${t("tijd.weg")}</p>` : "";
+      if (tijden === undefined) return `${weg}<p class="tijd-info">${t("tijd.laden")}</p>`;
+      return `${weg}
+        ${tijden
+          ? `<p class="tijd-info">${icon("MapPin", 15)} ${esc(t("tijd.info").replace("{plek}", tijden.plek || ""))}</p>`
+          : `<p class="form-note">${t("tijd.fout")}</p>`}
+        ${week ? `
+          <div class="tijd-weken">${weken.map((w, i) =>
+            `<button type="button" class="tijd-week${i === weekNr ? " on" : ""}" data-week="${i}">${esc(weekTekst(w))}</button>`).join("")}</div>
+          <div class="tijd-dagen">${week.dagen.map((dag) => `
+            <div class="tijd-dag">
+              <div class="tijd-datum">${esc(datumTekst(dag.datum, { weekday: "short", day: "numeric", month: "short" }))}</div>
+              <div class="chip-row">${dag.vrij.length
+                ? dag.vrij.map((k) => `<button type="button" class="chip${data.slot === k ? " on" : ""}" data-slot="${esc(k)}">${uurTekst(slotVanSleutel(k))}</button>`).join("")
+                : `<span class="tijd-vol">${t(dag.reden === "tekort" ? "tijd.tekort" : "tijd.vol")}</span>`}</div>
+            </div>`).join("")}</div>` : ""}
+        <button type="button" class="tijd-geen${data.slot === "geen" ? " on" : ""}" data-slot="geen">${t("tijd.geen")}</button>
+        ${data.slot === "geen" ? `<p class="form-note">${t("tijd.geen.uitleg")}</p>`
+          : data.slot ? `<p class="tijd-gekozen">${icon("Calendar", 15)} ${esc(t("tijd.gekozen").replace("{moment}", momentTekst(data.slot)))}</p>` : ""}`;
+    }
     return `<div class="form-stack">
       <div><label>${t("form.naam")}</label><input id="f-name" placeholder="${esc(t("form.naam.hint"))}" value="${esc(data.name)}"></div>
       <div><label>${t("form.email")}</label><input id="f-email" placeholder="you@students.uu.nl" value="${esc(data.email)}"></div>
@@ -1533,6 +1627,8 @@ function openForm() {
           <p>${t("form.viamail")}</p>
           <p style="font-size:13px;color:#777">${t("form.viamail.niets")
             .replace("{adres}", `<a href="mailto:${CONTACT_MAIL}">${CONTACT_MAIL}</a>`)}</p>`
+        : geboekt ? `<p>${esc(t("tijd.geboekt")).replace("{moment}", `<strong>${esc(momentTekst(data.slot))}</strong>`)}</p>`
+        : onbekend ? `<p>${t("tijd.onbekend")}</p>`
         : `<p>${t("afspr.gelukt")}</p>`}
         <button class="btn-next" data-close>${t("form.terug")}</button>
       </div>` : `
@@ -1588,6 +1684,15 @@ function openForm() {
       data[b.dataset.set] = b.dataset.val;
       render();
     }));
+    $$("[data-week]", wrap).forEach((b) => b.addEventListener("click", () => {
+      weekNr = Number(b.dataset.week);
+      render();
+    }));
+    $$("[data-slot]", wrap).forEach((b) => b.addEventListener("click", () => {
+      data.slot = b.dataset.slot;
+      slotWeg = false;
+      render();
+    }));
 
     ["name", "email", "notes"].forEach((k) => {
       const el = $("#f-" + k, wrap);
@@ -1609,9 +1714,26 @@ function openForm() {
       sending = true;
       submit.disabled = true;
       submit.innerHTML = `${icon("Check", 17)} ${t("form.versturen")}`;
-      sendForm(payload()).then((ok) => {
+      const metTijd = !!(data.slot && data.slot !== "geen");
+      // Een gesprek in de agenda zetten duurt langer dan alleen mailen.
+      sendFormAntwoord(payload(), metTijd ? 25000 : 8000).then((antw) => {
         sending = false;
+        if (antw && antw.fout === "bezet") {
+          // Net door iemand anders gekozen: terug naar de tijden, met de
+          // nieuwe stand erbij.
+          zetTijden(antw.tijden && antw.tijden.ok ? antw.tijden : tijden);
+          data.slot = "";
+          slotWeg = true;
+          step = 3;
+          render();
+          return;
+        }
+        // Geen antwoord binnen de tijd: waarschijnlijk wel aangekomen, zie
+        // sendForm. Of het gesprek vaststaat leest de student dan in de mail.
+        const ok = antw === undefined || !!(antw && antw.ok);
         viaMail = !ok;
+        geboekt = !!(antw && antw.geboekt);
+        onbekend = antw === undefined && metTijd;
         // gelukt het niet, dan opent alsnog het mailprogramma met alles erin
         if (!ok) window.location.href = mailtoFallback(mailOnderwerp(), mailTekst());
         done = true;
