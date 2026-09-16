@@ -312,6 +312,7 @@ const VERTALINGEN = {
   "progcat.impact":     { nl: "Impactgedreven" },
   "progcat.university": { nl: "Andere universiteiten" },
   "progcat.paid":       { nl: "Betaalde programma's" },
+  "progcat.summer":     { nl: "Zomerscholen" },
   "prog.betaald":       { en: "Paid", nl: "Betaald" },
   "prog.onbetaald":     { en: "Unpaid", nl: "Onbetaald" },
   "prog.kaart.voet":    { en: "Excited? Let's talk", nl: "Spreekt dit aan? Kom praten" },

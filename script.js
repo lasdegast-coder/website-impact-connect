@@ -901,6 +901,7 @@ const PROG_COLS = {
   url:      ["url", "link"],
   loc:      ["location"],
   cost:     ["costs", "cost"],
+  host:     ["host university/institution", "host", "institution"],
   logo:     ["logo", "logo url", "image"],       // optionele kolom in de sheet
 };
 
@@ -913,9 +914,18 @@ const PROGRAMME_LOGO_INDEX = (() => {
   for (const k in src) out[progKey(k)] = src[k];
   return out;
 })();
+// Instelling → logobestand, voor programma's zonder eigen logo.
+const INSTELLING_INDEX = ((typeof INSTELLING_LOGOS !== "undefined" && INSTELLING_LOGOS) || [])
+  .map(([naam, bestand]) => [progKey(naam), bestand]);
+function instellingLogo(host) {
+  const k = progKey(host);
+  if (!k) return null;
+  const hit = INSTELLING_INDEX.find(([naam]) => k.includes(naam));
+  return hit ? hit[1] : null;
+}
 function programmeLogo(p) {
   if (p.logo) return p.logo;                     // kolom "Logo" uit de sheet gaat voor
-  return PROGRAMME_LOGO_INDEX[progKey(p.name)] || null;
+  return PROGRAMME_LOGO_INDEX[progKey(p.name)] || instellingLogo(p.host);
 }
 
 // Witte logo's krijgen een donker vlak, anders vallen ze weg op het kaartje.
@@ -961,7 +971,7 @@ function rowsToProgrammes(rows, cat) {
       desc: get("desc") || "",
       url: get("url"), lang: get("lang"), level: get("level"),
       duration: get("duration"), signup: get("signup"), loc: get("loc"),
-      logo: get("logo"), paid: derivePaid(cost), cost,
+      logo: get("logo"), host: get("host"), paid: derivePaid(cost), cost,
     });
   }
   return out;
@@ -1024,7 +1034,8 @@ async function initProgrammes() {
   function render() {
     const list = programmes.filter((p) => p.cat === cat);
     grid.innerHTML = list.map((p, i) => {
-      const hint = p.paid === true ? t("prog.betaald") : p.paid === false ? t("prog.onbetaald") : (p.lang || null);
+      // Of iets betaald is zegt de categorie al; onder de naam staat de taal.
+      const hint = p.lang || null;
       const mono = (p.name || "?").replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase();
       return `<div class="tease-card reveal" data-delay="${Math.min(i, 8) * 50}" data-name="${esc(p.name)}">
         ${p.paid === true ? `<span class="paid-tag">${t("prog.betaald")}</span>` : ""}

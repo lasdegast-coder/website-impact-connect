@@ -306,6 +306,7 @@ const PROGRAMME_CATS = [
   { id: "impact",     label: "Impact-driven" },
   { id: "university", label: "Other universities" },
   { id: "paid",       label: "Paid programmes" },
+  { id: "summer",     label: "Summer schools" },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -346,12 +347,10 @@ const PROGRAMME_SHEETS = {
   impact:     tabblad(1914001672),   // tabblad "Impact Driven Programmes"
   university: tabblad(1861492196),   // tabblad "Programs from other university"
   paid:       tabblad(1646247199),   // tabblad "Paid Impact Programmes"
+  summer:     tabblad(6575484),      // tabblad "Summer School Programmes"
 
-  // Nog niet in gebruik: tabblad "Summer School Programmes" (gid 6575484).
-  // Daar staan inmiddels 36 programma's in, maar de kopregel is anders
-  // (School + Programme/course in plaats van Programme Name). Zodra we
-  // dat tabblad willen tonen: kolomnamen gelijktrekken, hier een regel
-  // toevoegen en de categorie erbij zetten in PROGRAMME_CATS.
+  // Het summerschool-tabblad heeft een kolom "Host university/institution"
+  // die de site niet toont; de instelling staat meestal al in de naam.
 };
 /* ═══════════════════════════════════════════════════════════════════
    LOGO'S BIJ PROGRAMMA'S
@@ -481,6 +480,34 @@ const PROGRAMME_LOGOS = {
 /* Logo's die wit zijn (gemaakt voor een donkere achtergrond). Die
    krijgen op het kaartje een donkergroen vlak, anders zie je niets. */
 const PROGRAMME_LOGOS_ON_DARK = ["Ocean Love"];
+
+/* Logo's per instelling. Heeft een programma zelf geen logo, dan kijkt
+   de site in de kolom "Host university/institution" van de sheet. Staat
+   daar een van de namen hieronder in, dan krijgt het kaartje dat logo.
+   Zo krijgt een nieuwe summer school van een bekende universiteit
+   vanzelf het goede logo.
+
+   De eerste naam die past telt. Zet een specifieke naam (IDEA League)
+   dus boven een algemene (TU Delft), anders wint de algemene. */
+const INSTELLING_LOGOS = [
+  ["IDEA League",                             "assets/programmes/idea-league-challenge-programme-delft.png"],
+  ["Utrecht University",                      "assets/programmes/utrecht-university-volunteer-opportunities-r.png"],
+  ["HU University of Applied Sciences",       "assets/programmes/hu-utrecht.png"],
+  ["Wageningen",                              "assets/programmes/financing-sustainable-transitions-minor-wur.png"],
+  ["Leiden University",                       "assets/programmes/leiden-university.png"],
+  ["University of Groningen",                 "assets/programmes/university-of-groningen.png"],
+  ["Hanze",                                   "assets/programmes/hanze.png"],
+  ["VU Amsterdam",                            "assets/programmes/vu-amsterdam.png"],
+  ["TU Delft",                                "assets/programmes/tu-delft.png"],
+  ["IHE Delft",                               "assets/programmes/ihe-delft.png"],
+  ["Maastricht University",                   "assets/programmes/maastricht-university.png"],
+  ["Radboud University",                      "assets/programmes/radboud-university.png"],
+  ["Erasmus University",                      "assets/programmes/erasmus-university-rotterdam.png"],
+  ["University of Twente",                    "assets/programmes/university-of-twente.png"],
+  ["NIOZ",                                    "assets/programmes/nioz.png"],
+  ["Wadden Sea",                              "assets/programmes/wadden-sea-world-heritage.png"],
+  ["Netherlands Centre for Coastal Research", "assets/programmes/nck.png"],
+];
 
 const PROGRAMMES_DATA = [
   { cat: "volunteer", name: "VC Utrecht / Vrijwilligerscentrale Utrecht", desc: "Central platform for volunteer work in Utrecht. Similar volunteer organizations exist in other Dutch cities (‘vrijwilligerscentrales’).", url: "https://www.vcutrecht.nl/", lang: "English/Dutch", level: null, duration: "Always", signup: null, loc: "Utrecht", paid: null, cost: null },
