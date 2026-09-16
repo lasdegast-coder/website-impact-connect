@@ -31,8 +31,11 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("127.0.0.1", PORT), NoCacheHandler) as httpd:
+    # Met threads: een browser die een verbinding openhoudt zonder iets te
+    # vragen, blokkeert anders alle andere verzoeken en lijkt de server dood.
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
+    socketserver.ThreadingTCPServer.daemon_threads = True
+    with socketserver.ThreadingTCPServer(("127.0.0.1", PORT), NoCacheHandler) as httpd:
         print(f"Impact Connect draait op http://127.0.0.1:{PORT}")
         print("Stoppen met Ctrl+C.")
         try:
