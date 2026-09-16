@@ -42,6 +42,9 @@ else
   echo "  kopieer de Script-ID."
   read -r -p "  Script-ID: " SCRIPT_ID
 fi
+# Plakken in een Windows-terminal zet er een onzichtbaar regeleinde of een
+# spatie achter, en dan klopt het instellingenbestand niet meer.
+SCRIPT_ID="$(printf '%s' "$SCRIPT_ID" | tr -d '\r[:space:]')"
 [ -n "$SCRIPT_ID" ] || { echo "Geen ID opgegeven. Gestopt."; exit 1; }
 
 echo
@@ -55,7 +58,9 @@ echo "▸ Stap 3 van 4: ophalen wat er nu bij Google staat"
 # verandert straks stilletjes wie er bij het script mag.
 TIJDELIJK="$(mktemp -d)"
 trap 'rm -rf "$TIJDELIJK"' EXIT
-printf '{"scriptId":"%s","rootDir":"."}\n' "$SCRIPT_ID" > "$TIJDELIJK/.clasp.json"
+# Met fileExtension, anders heten de opgehaalde bestanden Code.js en slaat
+# de vergelijking hieronder ze stilletjes over.
+printf '{"scriptId":"%s","rootDir":".","fileExtension":"gs"}\n' "$SCRIPT_ID" > "$TIJDELIJK/.clasp.json"
 ( cd "$TIJDELIJK" && $CLASP pull >/dev/null )
 
 if [ ! -f "$TIJDELIJK/appsscript.json" ]; then
@@ -73,13 +78,29 @@ echo "  Kopie van de huidige versie bij Google:"
 echo "    ${KOPIE#"$REPO/"}"
 ls "$KOPIE" | sed 's/^/      /'
 
-# Verschilt de live Code.gs van die in de repo? Dan is er in de editor
-# gewerkt, en moet je even kijken wat je weggooit.
-if [ -f "$KOPIE/Code.gs" ] && ! diff -q "$KOPIE/Code.gs" "$HIER/Code.gs" >/dev/null 2>&1; then
+# Verschilt een scriptbestand bij Google van de laatst vastgelegde versie in
+# de repo? Dan is er in de editor gewerkt, en moet je even kijken wat je
+# weggooit. We vergelijken met de laatste commit en niet met je map, zodat
+# eigen wijzigingen die nog niet gepusht zijn geen vals alarm geven.
+# Regeleindes tellen niet mee.
+ANDERS=""
+for BIJ_GOOGLE in "$KOPIE"/*.gs; do
+  [ -f "$BIJ_GOOGLE" ] || continue
+  NAAM="$(basename "$BIJ_GOOGLE")"
+  if ! IN_REPO="$(git -C "$REPO" show "HEAD:formulier-backend/$NAAM" 2>/dev/null)"; then
+    IN_REPO="$(cat "$HIER/$NAAM" 2>/dev/null || true)"
+  fi
+  if [ "$(tr -d '\r' < "$BIJ_GOOGLE")" != "$(printf '%s' "$IN_REPO" | tr -d '\r')" ]; then
+    ANDERS="$ANDERS $NAAM"
+  fi
+done
+if [ -n "$ANDERS" ]; then
   echo
-  echo "  LET OP: de Code.gs bij Google is niet gelijk aan die in de repo."
-  echo "  De eerste push vervangt de versie bij Google. Vergelijk ze eerst:"
-  echo "    diff \"${KOPIE#"$REPO/"}/Code.gs\" formulier-backend/Code.gs"
+  echo "  LET OP: deze bestanden bij Google zijn niet gelijk aan die in de repo:$ANDERS"
+  echo "  De eerste push vervangt de versie bij Google. Vergelijk ze eerst, bijvoorbeeld:"
+  for NAAM in $ANDERS; do
+    echo "    diff \"${KOPIE#"$REPO/"}/$NAAM\" formulier-backend/$NAAM"
+  done
   echo
   read -r -p "  Toch doorgaan? (j/n) " AKKOORD
   [ "$AKKOORD" = "j" ] || { echo "  Gestopt. Er is niets veranderd."; exit 1; }

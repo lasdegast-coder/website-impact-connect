@@ -90,7 +90,7 @@ Alle drie staan bewust uit. Zet ze alleen om als de gebruiker dat vraagt.
 ## De backend (Apps Script)
 
 De formulieren en het alumniloket draaien op Google Apps Script:
-`formulier-backend/Code.gs` en `Loket.gs`, onder het account
+`formulier-backend/Code.gs`, `Loket.gs` en `Gesprekken.gs`, onder het account
 contact@impactconnectutrecht.com.
 
 - **Pas het script altijd hier aan, nooit in de editor van Google.** De
@@ -111,5 +111,16 @@ contact@impactconnectutrecht.com.
   in met de eerste regel hierboven. Let op: gewoon `npx clasp login` werkt niet.
 - **Nooit een nieuwe implementatie maken.** Die krijgt een nieuw `/exec`-adres
   en dan praat de site met niets meer. Het script werkt de bestaande bij.
+- **Gesprekken inplannen.** Het afspraakformulier boekt het gekozen tijdslot in
+  de Google Agenda "Gesprekken" van contact@ (gedeeld met Zoya en Noah). Het
+  rooster, de 3 weken, de 48 uur en het maximum van 3 gesprekken per dag staan
+  in `formulier-backend/Gesprekken.gs`, niet in `data.js`. Een eigen afspraak
+  in die agenda maakt die tijd dicht.
+- **Gebruikt de backend een nieuwe Google-dienst** (agenda, Drive, …), dan moet
+  contact@ daar eerst één keer toestemming voor geven. Anders werkt na de push
+  géén enkel formulier meer. Volgorde: in `formulier-backend`
+  `npx --yes @google/clasp@2.4.2 push --force` (de live versie verandert dan
+  nog niet), dan in de editor een functie uitvoeren die de dienst gebruikt
+  (bij de agenda `agendaTest`) en op Toestaan klikken, en pas daarna `git push`.
 - Zet `&vers=1` achter `FORM_ENDPOINT?lijst=alumni` om de cache van vijf
   minuten over te slaan als je een verse versie wilt controleren.
