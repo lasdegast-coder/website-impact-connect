@@ -1101,8 +1101,7 @@ body::before {
 .prog-pop {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
   width: min(440px, 92vw); background: var(--paper); border-radius: 24px;
-  box-shadow: 0 30px 80px rgba(0,0,0,.35); z-index: 130; overflow: hidden auto;
-  max-height: 88vh;                     /* een lange zin past dan nog op een telefoon */
+  box-shadow: 0 30px 80px rgba(0,0,0,.35); z-index: 130; overflow: hidden;
   animation: pop .22s cubic-bezier(.2,.8,.3,1);
 }
 .prog-pop .head { background: var(--green); color: #fff; padding: 26px 28px 22px; position: relative; overflow: hidden; }
@@ -1112,10 +1111,6 @@ body::before {
 .prog-pop .name { font-family: var(--font-display); font-weight: 600; font-size: 22px; line-height: 1.2; position: relative; }
 .prog-pop .body { padding: 24px 28px 28px; }
 .prog-pop .body p { font-size: 14.5px; line-height: 1.6; color: var(--ink); margin: 0 0 22px; }
-/* De zin uit de sheet is het verhaal; de uitnodiging eronder is kleiner,
-   zodat je eerst leest waar het programma over gaat. */
-.prog-pop .body p.prog-zin { font-size: 15px; line-height: 1.55; margin: 0 0 14px; }
-.prog-pop .body p.prog-uitnodiging { font-size: 13.5px; color: #555; margin: 0 0 20px; }
 .prog-pop .actions { display: flex; flex-direction: column; gap: 11px; }
 .prog-pop .actions a {
   text-decoration: none; border-radius: 13px; font-weight: 800; font-size: 15px;
