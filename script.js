@@ -903,6 +903,7 @@ const PROG_COLS = {
   cost:     ["costs", "cost"],
   host:     ["host university/institution", "host", "institution"],
   partner:  ["partner"],                         // "yes" = organisatie waar we mee samenwerken
+  zin:      ["one-liner", "oneliner", "one liner"],   // de korte zin in het venster
   logo:     ["logo", "logo url", "image"],       // optionele kolom in de sheet
 };
 
@@ -986,7 +987,7 @@ function rowsToProgrammes(rows, cat) {
       url: get("url"), lang: get("lang"), level: get("level"),
       duration: get("duration"), signup: get("signup"), loc: get("loc"),
       logo: get("logo"), host: get("host"), paid: derivePaid(cost), cost,
-      partner: isPartner(get("partner")),
+      partner: isPartner(get("partner")), zin: get("zin"),
     });
   }
   return out;
@@ -1096,8 +1097,6 @@ async function initProgrammes() {
 }
 
 function openProgrammePopup(p) {
-  const subject = encodeURIComponent(`${t("prog.mail.vraag")}: ${p.name}`);
-  const body = encodeURIComponent(t("prog.mail.vraag.tekst").replace("{naam}", p.name));
   const apptSubject = encodeURIComponent(`${t("prog.mail.afspraak")}, ${p.name}`);
   const apptBody = encodeURIComponent(t("prog.mail.afspraak.tekst").replace("{naam}", p.name));
 
@@ -1114,10 +1113,12 @@ function openProgrammePopup(p) {
       </div>
       <div class="body">
         ${p.partner ? `<p class="partner-regel">${bridgeMark(18, "currentColor")} ${esc(t("prog.pop.partner").replace("{naam}", p.name))}</p>` : ""}
-        <p>${t("prog.pop.tekst")}</p>
+        ${/* De korte zin uit de sheet. Staat er geen, dan blijft alleen de
+              uitnodiging voor een gesprek over, zoals het altijd was. */""}
+        ${p.zin ? `<p class="prog-zin">${esc(p.zin)}</p>` : ""}
+        <p class="prog-uitnodiging">${t("prog.pop.tekst")}</p>
         <div class="actions">
           <a class="primary" href="mailto:${CONTACT_MAIL}?subject=${apptSubject}&body=${apptBody}">${bridgeMark(22, "currentColor")} ${t("nav.appointment")}</a>
-          <a class="ghost-btn" href="mailto:${CONTACT_MAIL}?subject=${subject}&body=${body}">${icon("Mail", 16)} ${t("prog.pop.mail")}</a>
         </div>
       </div>
     </div>`;
