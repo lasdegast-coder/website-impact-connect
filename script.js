@@ -902,6 +902,7 @@ const PROG_COLS = {
   loc:      ["location"],
   cost:     ["costs", "cost"],
   host:     ["host university/institution", "host", "institution"],
+  partner:  ["partner"],                         // "yes" = organisatie waar we mee samenwerken
   logo:     ["logo", "logo url", "image"],       // optionele kolom in de sheet
 };
 
@@ -951,6 +952,16 @@ function derivePaid(cost) {
   return null;
 }
 
+/* Een partner is een organisatie waarmee we echt samenwerken: wij kunnen een
+   student daar rechtstreeks voorstellen. Dat zet je aan in de kolom "Partner"
+   van de programmasheet; "yes", "ja", "x" of "true" tellen allemaal mee. Het
+   kaartje krijgt dan een label en komt bovenaan in zijn categorie. */
+const isPartner = (waarde) => /^(yes|ja|y|x|true|waar)$/i.test((waarde || "").trim());
+
+// Partners eerst, de rest in de volgorde van de sheet.
+const partnersBovenaan = (lijst) =>
+  [...lijst].sort((a, b) => (b.partner === true) - (a.partner === true));
+
 function rowsToProgrammes(rows, cat) {
   const headIdx = rows.findIndex((r) => r.some((c) => /programme name/i.test(c || "")));
   if (headIdx < 0) return [];
@@ -972,6 +983,7 @@ function rowsToProgrammes(rows, cat) {
       url: get("url"), lang: get("lang"), level: get("level"),
       duration: get("duration"), signup: get("signup"), loc: get("loc"),
       logo: get("logo"), host: get("host"), paid: derivePaid(cost), cost,
+      partner: isPartner(get("partner")),
     });
   }
   return out;
@@ -1032,13 +1044,15 @@ async function initProgrammes() {
   }
 
   function render() {
-    const list = programmes.filter((p) => p.cat === cat);
+    const list = partnersBovenaan(programmes.filter((p) => p.cat === cat));
     grid.innerHTML = list.map((p, i) => {
       // Of iets betaald is zegt de categorie al; onder de naam staat de taal.
       const hint = p.lang || null;
       const mono = (p.name || "?").replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase();
       return `<div class="tease-card reveal" data-delay="${Math.min(i, 8) * 50}" data-name="${esc(p.name)}">
-        ${p.paid === true ? `<span class="paid-tag">${t("prog.betaald")}</span>` : ""}
+        ${/* Of iets betaald is zegt de categorie al; een partner is wel
+              iets om te zien, want daar kunnen wij je voorstellen. */""}
+        ${p.partner ? `<span class="partner-tag">${t("prog.partner")}</span>` : ""}
         <div class="mono-wrap">${programmeLogo(p)
           ? `<div class="prog-logo${logoOnDark(p) ? " on-dark" : ""}"><img src="${esc(programmeLogo(p))}" alt="" loading="lazy"></div>`
           : `<div class="mono">${esc(mono)}</div>`}</div>
@@ -1096,6 +1110,7 @@ function openProgrammePopup(p) {
         <div class="name">${esc(p.name)}</div>
       </div>
       <div class="body">
+        ${p.partner ? `<p class="partner-regel">${bridgeMark(18, "currentColor")} ${esc(t("prog.pop.partner").replace("{naam}", p.name))}</p>` : ""}
         <p>${t("prog.pop.tekst")}</p>
         <div class="actions">
           <a class="primary" href="mailto:${CONTACT_MAIL}?subject=${apptSubject}&body=${apptBody}">${bridgeMark(22, "currentColor")} ${t("nav.appointment")}</a>
@@ -1153,7 +1168,7 @@ async function initHome() {
   // er met de muis overheen gaat.
   function paintBand(list) {
     if (!band) return;
-    const met = list.filter((p) => programmeLogo(p));
+    const met = partnersBovenaan(list.filter((p) => programmeLogo(p)));
     if (!met.length) return;
     // Geen loading="lazy" hier. De browser bepaalt dat aan de hand van waar
     // een plaatje in de layout staat, en de band schuift met transform: een

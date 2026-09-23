@@ -172,6 +172,12 @@ de sheet op **Iedereen met de link → Viewer** blijven staan. Zet iemand dat ui
 verdwijnen de nieuwste programma's stilletjes en toont de site de lijst uit
 `PROGRAMMES_DATA`.
 
+**Een partner aanzetten** — zet in de programmasheet een kolom `Partner` en vul daar
+`yes` in bij de organisatie waarmee jullie samenwerken (`ja`, `x` en `true` mogen ook).
+Dat kaartje krijgt dan het groene label PARTNER, komt bovenaan in zijn categorie en
+vooraan in de logoband, en in het venster erachter staat dat wij de student kunnen
+voorstellen. Is de kolom leeg of is er geen kolom, dan verandert er niets.
+
 Een tabblad toevoegen: open het in de sheet, neem het nummer achter `gid=` uit de
 adresbalk over in `PROGRAMME_SHEETS` en zet de categorie erbij in `PROGRAMME_CATS`
 ernaast. De kopregel moet `Programme Name | Description | Sign up date | Duration |

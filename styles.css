@@ -768,10 +768,18 @@ body::before {
   transition: transform .3s cubic-bezier(.2,.8,.3,1), box-shadow .3s, border-color .3s;
 }
 .tease-card:hover { transform: translateY(-6px); box-shadow: 0 20px 46px rgba(19,53,42,.16); border-color: var(--clay); }
-.tease-card .paid-tag {
+/* Het partnerlabel staat waar eerst "Paid" stond. Donker en gevuld, want
+   dit hoort op te vallen tussen de andere kaartjes. */
+.tease-card .partner-tag {
   position: absolute; top: 12px; left: 12px; font-size: 9.5px; font-weight: 800;
-  letter-spacing: .5px; text-transform: uppercase; color: var(--clay);
-  background: var(--mint); border-radius: 999px; padding: 3px 9px;
+  letter-spacing: .6px; text-transform: uppercase; color: #fff;
+  background: var(--green); border-radius: 999px; padding: 3px 9px;
+  box-shadow: 0 2px 8px rgba(19,53,42,.18);
+}
+.prog-pop .body p.partner-regel {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13.5px; font-weight: 600; color: var(--green);
+  background: var(--mint); border-radius: 12px; padding: 10px 13px; margin: 0 0 16px;
 }
 /* Het waas hoort bij de letterbadge (de teaser). Een logo blijft scherp,
    anders valt er niets te herkennen. */
