@@ -647,6 +647,7 @@ const EVENT_COLS = {
   cost: ["cost", "costs"],
   link: ["registration link", "link", "url"],
   cat:  ["category", "theme"],
+  send: ["good to send?", "good to send"],
 };
 
 // De sheet schrijft categorieën voluit; de site gebruikt korte namen.
@@ -673,6 +674,9 @@ function rowsToEvents(rows) {
     const name = cellOrNull(r[col.name]);
     if (!name || /^event$/i.test(name)) continue;          // leeg of herhaalde kopregel
     const get = (k) => (col[k] >= 0 ? cellOrNull(r[col[k]]) : null);
+    // "No" bij "Good to send?" houdt een event van de site, net als bij de
+    // WhatsApp-bot. Een lege cel telt als ja.
+    if (/^\s*no\b/i.test(get("send") || "")) continue;
         // De sheet schrijft soms twee thema's in één cel ("Energy, Governance",
       // "Ecology / zero waste"). Zonder dit belandden die allemaal onder
       // "General". We nemen het eerste thema; dat is in de sheet steeds het
