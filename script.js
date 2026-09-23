@@ -968,6 +968,9 @@ function rowsToProgrammes(rows, cat) {
   const head = rows[headIdx].map((h) => (h || "").trim().toLowerCase());
   const col = {};
   for (const key in PROG_COLS) col[key] = head.findIndex((h) => PROG_COLS[key].includes(h));
+  // De partnerkolom heet in de sheet "Partner (yes/no)". Alles wat met
+  // "partner" begint telt, zodat een toevoeging achter de naam niets breekt.
+  if (col.partner < 0) col.partner = head.findIndex((h) => h.startsWith("partner"));
   if (col.name < 0) return [];
 
   const out = [];

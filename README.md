@@ -172,8 +172,9 @@ de sheet op **Iedereen met de link → Viewer** blijven staan. Zet iemand dat ui
 verdwijnen de nieuwste programma's stilletjes en toont de site de lijst uit
 `PROGRAMMES_DATA`.
 
-**Een partner aanzetten** — zet in de programmasheet een kolom `Partner` en vul daar
-`yes` in bij de organisatie waarmee jullie samenwerken (`ja`, `x` en `true` mogen ook).
+**Een partner aanzetten** — zet in de programmasheet een kolom die met `Partner`
+begint (`Partner (yes/no)` mag dus ook) en vul daar `yes` in bij de organisatie
+waarmee jullie samenwerken (`ja`, `x` en `true` mogen ook).
 Dat kaartje krijgt dan het groene label PARTNER, komt bovenaan in zijn categorie en
 vooraan in de logoband, en in het venster erachter staat dat wij de student kunnen
 voorstellen. Is de kolom leeg of is er geen kolom, dan verandert er niets.
