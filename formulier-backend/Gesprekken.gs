@@ -24,12 +24,13 @@
    =================================================================== */
 
 const AGENDA_NAAM = 'Gesprekken';
-const GESPREK_PLEK = 'The Playground';
+const GESPREK_PLEK = 'The Playground in Building VMC';
 const TIJDZONE = 'Europe/Amsterdam';
 
 /* Het vaste rooster. dag: 1 = maandag, 2 = dinsdag, ... 5 = vrijdag.
    van en tot zijn hele uren; tot 17 betekent dat het laatste slot om 16:00
-   begint. Een slot is een uur: een half uur gesprek en een half uur erna.
+   begint. Een slot is een uur: GESPREK_MINUTEN gesprek en de rest van het uur
+   als uitloop. De student kiest dus altijd een heel uur.
    "wie" komt in de titel van de afspraak. Op woensdag is een van de twee er;
    wie het gesprek doet zet zijn naam er zelf in. */
 const SPREEKUUR = [
@@ -40,7 +41,7 @@ const SPREEKUUR = [
 const SPREEKUUR_WEKEN = 3;           // zoveel hele weken ziet een student
 const SPREEKUUR_MINIMAAL_UUR = 48;   // zo kort van tevoren op z'n vroegst
 const SPREEKUUR_MAX_PER_DAG = 3;     // meer gesprekken op één dag kan niet
-const GESPREK_MINUTEN = 30;
+const GESPREK_MINUTEN = 45;
 
 /* Zo herkent het script een gesprek dat via de site is geboekt. Alleen die
    tellen mee voor het maximum per dag; een eigen afspraak ("Zoya vrij")
@@ -169,7 +170,7 @@ function gesprekTijden() {
     const dagen = gesprekDagen(new Date(), agenda).map(function (d) {
       return { datum: d.datum, vrij: d.vrij, reden: d.reden };
     });
-    return { ok: true, plek: GESPREK_PLEK, dagen: dagen };
+    return { ok: true, plek: GESPREK_PLEK, duur: GESPREK_MINUTEN, dagen: dagen };
   } catch (err) {
     console.error(err);
     return { ok: false };
@@ -220,7 +221,7 @@ function gesprekBoeken(d) {
 /* De omschrijving in de agenda. Die ziet de student ook, dus hierin staat
    alleen wat hij zelf heeft ingevuld. */
 function gesprekOmschrijving(d) {
-  return ['A 30-minute conversation with Impact Connect at ' + GESPREK_PLEK + '.', '']
+  return ['A ' + GESPREK_MINUTEN + '-minute conversation with Impact Connect at ' + GESPREK_PLEK + '.', '']
     .concat(antwoordRegels('afspraak', d))
     .concat(['', 'Can\'t make it? Reply to your confirmation email, or write to ' + ONTVANGER + '.'])
     .join('\n');
