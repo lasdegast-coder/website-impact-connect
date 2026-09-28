@@ -1512,11 +1512,15 @@ function openForm() {
       ? `${a.getDate()}–${datumTekst(b, { day: "numeric", month: "short" })}`
       : `${datumTekst(a, { day: "numeric", month: "short" })} – ${datumTekst(b, { day: "numeric", month: "short" })}`;
   };
-  const uurTekst = (d, min = "00") => `${tweeCijfers(d.getHours())}:${min}`;
+  const uurTekst = (d) => `${tweeCijfers(d.getHours())}:${tweeCijfers(d.getMinutes())}`;
+  // Hoe lang een gesprek duurt bepaalt de backend (GESPREK_MINUTEN in
+  // Gesprekken.gs). Een student kiest een heel uur; de rest is uitloop.
+  const gesprekDuur = () => (tijden && tijden.duur) || 30;
   const momentTekst = (sleutel) => {
     const d = slotVanSleutel(sleutel);
+    const eind = new Date(d.getTime() + gesprekDuur() * 60000);
     const plek = tijden && tijden.plek ? ` · ${tijden.plek}` : "";
-    return `${datumTekst(d, { weekday: "long", day: "numeric", month: "long" })}, ${uurTekst(d)}–${uurTekst(d, "30")}${plek}`;
+    return `${datumTekst(d, { weekday: "long", day: "numeric", month: "long" })}, ${uurTekst(d)}–${uurTekst(eind)}${plek}`;
   };
 
   const wrap = document.createElement("div");
@@ -1615,7 +1619,7 @@ function openForm() {
       if (tijden === undefined) return `${weg}<p class="tijd-info">${t("tijd.laden")}</p>`;
       return `${weg}
         ${tijden
-          ? `<p class="tijd-info">${icon("MapPin", 15)} ${esc(t("tijd.info").replace("{plek}", tijden.plek || ""))}</p>`
+          ? `<p class="tijd-info">${icon("MapPin", 15)} ${esc(t("tijd.info").replace("{minuten}", gesprekDuur()).replace("{plek}", tijden.plek || ""))}</p>`
           : `<p class="form-note">${t("tijd.fout")}</p>`}
         ${week ? `
           <div class="tijd-weken">${weken.map((w, i) =>
@@ -1633,9 +1637,12 @@ function openForm() {
     }
     return `<div class="form-stack">
       <div><label>${t("form.naam")}</label><input id="f-name" placeholder="${esc(t("form.naam.hint"))}" value="${esc(data.name)}"></div>
-      <div><label>${t("form.email")}</label><input id="f-email" placeholder="you@students.uu.nl" value="${esc(data.email)}"></div>
+      <div><label>${t("form.email")}</label><input id="f-email" placeholder="you@mail.com" value="${esc(data.email)}"></div>
       <div><label>${t("afspr.rest")} <span style="font-weight:400;color:#999">${t("form.optioneel")}</span></label>
         <textarea id="f-notes" rows="3" placeholder="${esc(t("afspr.rest.hint"))}">${esc(data.notes)}</textarea></div>
+      ${/* Bevestigingen belanden bij universiteitsadressen vaak in de spam,
+            en dan denkt een student dat zijn afspraak niet is doorgekomen. */""}
+      <p class="form-note let-op">${icon("Mail", 13)}<span>${t("form.spam")}</span></p>
       <p class="form-note">${t("afspr.privacy")}</p>
     </div>`;
   }
@@ -1652,6 +1659,7 @@ function openForm() {
         : geboekt ? `<p>${esc(t("tijd.geboekt")).replace("{moment}", `<strong>${esc(momentTekst(data.slot))}</strong>`)}</p>`
         : onbekend ? `<p>${t("tijd.onbekend")}</p>`
         : `<p>${t("afspr.gelukt")}</p>`}
+        ${viaMail ? "" : `<p class="form-note let-op klaar">${icon("Mail", 13)}<span>${t("form.spam.klaar")}</span></p>`}
         <button class="btn-next" data-close>${t("form.terug")}</button>
       </div>` : `
       <div class="progress">${steps.map((_, i) => `<i class="${i <= step ? "on" : ""}"></i>`).join("")}</div>
@@ -1881,7 +1889,7 @@ function openAlumniForm() {
     }
     return `<div class="form-stack">
       <div><label>${t("form.naam")}</label><input id="a-name" placeholder="${esc(t("form.naam.hint"))}" value="${esc(data.name)}"></div>
-      <div><label>${t("form.email")}</label><input id="a-email" placeholder="you@students.uu.nl" value="${esc(data.email)}"></div>
+      <div><label>${t("form.email")}</label><input id="a-email" placeholder="you@mail.com" value="${esc(data.email)}"></div>
       <div><label>${t("al.studie")} <span style="font-weight:400;color:#999">${t("form.optioneel")}</span></label>
         <input id="a-study" placeholder="${esc(t("al.studie.hint"))}" value="${esc(data.study)}"></div>
       <p class="form-note">${t("al.privacy")}</p>
@@ -2438,7 +2446,7 @@ function openLoketForm(alumnus) {
     }
     return `<div class="form-stack">
       <div><label>${t("form.naam")}</label><input id="a-name" placeholder="${esc(t("form.naam.hint"))}" value="${esc(data.name)}"></div>
-      <div><label>${t("form.email")}</label><input id="a-email" placeholder="you@students.uu.nl" value="${esc(data.email)}"></div>
+      <div><label>${t("form.email")}</label><input id="a-email" placeholder="you@mail.com" value="${esc(data.email)}"></div>
       <div><label>${t("al.studie")} <span style="font-weight:400;color:#999">${t("form.optioneel")}</span></label>
         <input id="a-study" placeholder="${esc(t("al.studie.hint"))}" value="${esc(data.study)}"></div>
       <p class="form-note">${t("lok.akkoord")}</p>
