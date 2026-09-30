@@ -928,9 +928,35 @@ function instellingLogo(host) {
   const hit = INSTELLING_INDEX.find(([naam]) => k.includes(naam));
   return hit ? hit[1] : null;
 }
+/* Vangnet als er geen eigen logo is: het pictogram van de website van het
+   programma zelf, opgehaald bij Google. Zo heeft een nieuw programma in de
+   sheet meteen een herkenbaar kaartje, ook als niemand er een logo bij zoekt,
+   en maakt een naamswijziging in de sheet niet meer uit. In de kolom URL
+   staat soms meer dan alleen een adres ("https://... (our ref. doc)"), dus we
+   vissen het adres eruit. */
+function websitePictogram(p) {
+  const adres = String(p.url || "").match(/https?:\/\/[^\s"'<>]+/);
+  if (!adres) return null;
+  try {
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hoofddomein(new URL(adres[0]).hostname))}&sz=128`;
+  } catch (err) {
+    return null;
+  }
+}
+
+/* Van "werkenbij.klimaatroute.nl" naar "klimaatroute.nl". Op een subdomein
+   staat vaak geen pictogram, en dan komt er een grijze wereldbol terug. */
+function hoofddomein(host) {
+  const delen = host.split(".");
+  if (delen.length < 3) return host;
+  // .co.uk, .ac.uk en dat soort staarten hebben een deel extra nodig.
+  const staart = ["co", "ac", "org", "com", "gov", "edu", "net"];
+  return staart.includes(delen[delen.length - 2]) ? delen.slice(-3).join(".") : delen.slice(-2).join(".");
+}
+
 function programmeLogo(p) {
   if (p.logo) return p.logo;                     // kolom "Logo" uit de sheet gaat voor
-  return PROGRAMME_LOGO_INDEX[progKey(p.name)] || instellingLogo(p.host);
+  return PROGRAMME_LOGO_INDEX[progKey(p.name)] || instellingLogo(p.host) || websitePictogram(p);
 }
 
 // Witte logo's krijgen een donker vlak, anders vallen ze weg op het kaartje.
