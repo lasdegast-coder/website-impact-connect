@@ -43,6 +43,13 @@ const SPREEKUUR_MINIMAAL_UUR = 48;   // zo kort van tevoren op z'n vroegst
 const SPREEKUUR_MAX_PER_DAG = 3;     // meer gesprekken op één dag kan niet
 const GESPREK_MINUTEN = 45;
 
+/* Uit de gewone agenda van het account tellen alleen korte afspraken mee: een
+   overleg of een pitch sluit een uur, maar een werksessie van negen tot vijf
+   of een afspraak van de hele dag niet. Anders is het spreekuur op zo'n dag
+   meteen helemaal weg. Wil je een dag echt dicht, zet dan een afspraak in de
+   agenda "Gesprekken"; daar blokkeert alles. */
+const EIGEN_AGENDA_MAX_UREN = 4;
+
 /* Zo herkent het script een gesprek dat via de site is geboekt. Alleen die
    tellen mee voor het maximum per dag; een eigen afspraak ("Zoya vrij")
    maakt wel sloten dicht, maar is geen gesprek. */
@@ -93,6 +100,47 @@ function gesprekTekst(van) {
     + '–' + Utilities.formatDate(tot, TIJDZONE, 'HH:mm');
 }
 
+/* ---- wat een uur bezet maakt ----------------------------------------
+   Twee agenda's tellen mee:
+     - "Gesprekken": daar blokkeert alles, ook een afspraak van de hele dag;
+     - de gewone agenda van het contact@-account: daar blokkeren alleen
+       afspraken korter dan EIGEN_AGENDA_MAX_UREN.
+   Een afspraak die je hebt afgewezen telt nooit mee; anders blokkeert een
+   uitnodiging waar je "nee" op hebt gezegd alsnog een uur. Alleen gesprekken
+   uit "Gesprekken" tellen mee voor het maximum per dag.
+
+   Geeft alles terug wat er in de agenda's staat, met per afspraak of hij
+   blokkeert. agendaTest laat daarmee ook zien wat er genegeerd wordt.
+   ------------------------------------------------------------------- */
+function gesprekBlokkades(agenda, van, tot) {
+  const agendas = [agenda];
+  const eigen = CalendarApp.getDefaultCalendar();
+  if (eigen && eigen.getId() !== agenda.getId()) agendas.push(eigen);
+
+  const blokken = [];
+  agendas.forEach(function (a) {
+    const isGesprekkenAgenda = a.getId() === agenda.getId();
+    a.getEvents(van, tot).forEach(function (e) {
+      let afgezegd = false;
+      // Niet elke afspraak heeft gasten; dan geeft getMyStatus een fout.
+      try { afgezegd = e.getMyStatus() === CalendarApp.GuestStatus.NO; } catch (err) { afgezegd = false; }
+      if (afgezegd) return;
+      const van2 = e.getStartTime().getTime();
+      const tot2 = e.getEndTime().getTime();
+      const langOfHeleDag = e.isAllDayEvent() || (tot2 - van2) >= EIGEN_AGENDA_MAX_UREN * 3600000;
+      blokken.push({
+        van: van2,
+        tot: tot2,
+        gesprek: isGesprekkenAgenda && e.getTag(GESPREK_LABEL) === 'gesprek',
+        titel: e.getTitle(),
+        waar: a.getName(),
+        blokkeert: isGesprekkenAgenda || !langOfHeleDag,
+      });
+    });
+  });
+  return blokken;
+}
+
 /* ---- welke sloten er vrij zijn ---------------------------------------
    Geeft alle spreekuurdagen van SPREEKUUR_WEKEN hele weken terug, met per
    dag de vrije sloten. De eerste week is de eerste waarin na de 48 uur nog
@@ -117,15 +165,9 @@ function gesprekDagen(nu, agenda) {
   const maandag = plusDagen(eerste, -(gesprekWeekdag(eerste) - 1));
   const na = plusDagen(maandag, SPREEKUUR_WEKEN * 7);
 
-  // Alle afspraken in die weken in één keer ophalen.
-  const blokken = agenda.getEvents(gesprekMoment(gesprekDag(maandag), 0, 0), gesprekMoment(gesprekDag(na), 0, 0))
-    .map(function (a) {
-      return {
-        van: a.getStartTime().getTime(),
-        tot: a.getEndTime().getTime(),
-        gesprek: a.getTag(GESPREK_LABEL) === 'gesprek',
-      };
-    });
+  // Alle afspraken in die weken in één keer ophalen, uit beide agenda's.
+  const blokken = gesprekBlokkades(agenda,
+    gesprekMoment(gesprekDag(maandag), 0, 0), gesprekMoment(gesprekDag(na), 0, 0));
 
   const dagen = [];
   for (let i = 0; i < SPREEKUUR_WEKEN * 7; i++) {
@@ -148,7 +190,7 @@ function gesprekDagen(nu, agenda) {
       const tot = van + 3600000;
       const teVroeg = van < vroegst;
       if (!teVroeg) allesTeVroeg = false;
-      const bezet = blokken.some(function (b) { return b.van < tot && b.tot > van; });
+      const bezet = blokken.some(function (b) { return b.blokkeert && b.van < tot && b.tot > van; });
       if (!bezet && !vol && !teVroeg) vrij.push(dag + 'T' + gesprekTwee(uur) + ':00');
     }
     dagen.push({
@@ -243,8 +285,25 @@ function agendaTest() {
     return;
   }
   console.log('Agenda gevonden: ' + agenda.getName());
-  gesprekDagen(new Date(), agenda).forEach(function (d) {
+  const dagen = gesprekDagen(new Date(), agenda);
+  dagen.forEach(function (d) {
     console.log(d.datum + ' (' + d.wie + '): '
       + (d.vrij.length ? d.vrij.map(function (s) { return s.slice(11); }).join(' ') : d.reden));
+  });
+
+  // Wat er in die weken tijd dichthoudt, en uit welke agenda het komt.
+  if (!dagen.length) return;
+  const van = gesprekMoment(dagen[0].datum, 0, 0);
+  const tot = new Date(gesprekMoment(dagen[dagen.length - 1].datum, 0, 0).getTime() + 86400000);
+  const blokken = gesprekBlokkades(agenda, van, tot);
+  console.log('Afspraken die tijd dichthouden: '
+    + blokken.filter(function (b) { return b.blokkeert; }).length
+    + ' (en ' + blokken.filter(function (b) { return !b.blokkeert; }).length + ' genegeerd)');
+  blokken.forEach(function (b) {
+    console.log('   ' + Utilities.formatDate(new Date(b.van), TIJDZONE, 'EEE d MMM HH:mm')
+      + '-' + Utilities.formatDate(new Date(b.tot), TIJDZONE, 'HH:mm')
+      + '  [' + b.waar + ']  ' + b.titel
+      + (b.gesprek ? '  (geboekt gesprek)' : '')
+      + (b.blokkeert ? '' : '  → GENEGEERD, te lang of hele dag'));
   });
 }
