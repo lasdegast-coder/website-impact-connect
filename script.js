@@ -2268,10 +2268,29 @@ function initAlumniloket() {
   if (!bak) return;
   if (!FORM_ENDPOINT) return alumniStatus("lok.uit");
 
+  // Komt iemand binnen via een link uit onze opvolgmail (?alumnus=…), dan
+  // openen we dat profiel meteen met het aanvraagformulier erbij. De student
+  // doorloopt zo gewoon de route die er al is; wij keuren daarna goed, en pas
+  // dan gaat de naam naar hem toe.
+  let linkGebruikt = false;
+  const openUitLink = (lijst) => {
+    if (linkGebruikt) return;
+    const id = new URLSearchParams(location.search).get("alumnus");
+    if (!id) return;
+    const a = lijst.find((x) => x.id === id);
+    if (!a) return;
+    linkGebruikt = true;
+    const knop = $(`[data-vraag-aan="${CSS.escape(id)}"]`);
+    const kaart = knop ? knop.closest(".alum-card") : null;
+    if (kaart) kaart.scrollIntoView({ block: "center" });
+    if (!a.vol) openLoketForm(a);
+  };
+
   const toon = (lijst) => {
     alumniLijst = lijst;
     tekenAlumniFilters();
     tekenAlumniLijst();
+    openUitLink(lijst);
   };
 
   // Testprofielen bewaren we niet: die wil je juist elke keer vers zien.

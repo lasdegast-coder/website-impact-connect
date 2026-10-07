@@ -246,6 +246,10 @@ function gesprekBoeken(d) {
   if (!gevonden || gevonden.vrij.indexOf(sleutel) === -1) return { status: 'bezet' };
 
   const naam = tekstOf(d.naam, 'student');
+  // Een kenmerk per gesprek. Het staat op de afspraak én op de regel in de
+  // sheet, zodat de opvolging later weet over welk gesprek het gaat.
+  const ref = 'GSP-' + Utilities.formatDate(van, TIJDZONE, 'yyyyMMdd-HHmm') + '-'
+    + Utilities.getUuid().slice(0, 4);
   const afspraak = agenda.createEvent(
     'Impact Connect × ' + naam + ' (' + gevonden.wie + ')',
     van,
@@ -257,6 +261,10 @@ function gesprekBoeken(d) {
       sendInvites: true,
     });
   afspraak.setTag(GESPREK_LABEL, 'gesprek');
+  afspraak.setTag('ref', ref);
+  d.ref = ref;
+  d.gesprekOp = van;
+  d.door = gevonden.wie;
   return { status: 'geboekt', tekst: tekst };
 }
 

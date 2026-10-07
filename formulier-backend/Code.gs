@@ -126,6 +126,12 @@ function doPost(e) {
     // Het tekstvak uit de navraagmail, drie weken na een introductie.
     if (d.formulier === 'loketfeedback') return loketFeedbackOpslaan(d);
 
+    // De pagina's na een gesprek; zie Opvolging.gs. Ook deze verwachten een
+    // pagina terug en geen JSON, want er kijkt een mens naar.
+    if (d.formulier === 'gesprekteam') return opvolgingTeamOpslaan(d);
+    if (d.formulier === 'gesprekcijfer') return opvolgingTekstOpslaan(d);
+    if (d.formulier === 'gesprekuitkomst') return opvolgingUitkomstOpslaan(d);
+
     // hasOwnProperty en niet FORMULIEREN[...], want elk object in JavaScript
     // heeft van zichzelf al namen als "constructor" en "toString". Zonder
     // deze controle zou iemand die "constructor" meestuurt het script laten
@@ -227,6 +233,13 @@ function doGet(e) {
 
   // De vrije tijdsloten voor een gesprek; zie Gesprekken.gs.
   if (p.lijst === 'tijden') return antwoord(gesprekTijden());
+
+  // De knoppen uit de mails na een gesprek; zie Opvolging.gs.
+  if (p.gteam) return opvolgingTeamPagina(p.gteam);
+  if (p.gcijfer) return opvolgingCijferPagina(p.gcijfer);
+  if (p.gvervolg) return opvolgingVervolgPagina(p.gvervolg);
+  if (p.guitkomst) return opvolgingUitkomstPagina(p.guitkomst);
+  if (p.gstop) return opvolgingStopPagina(p.gstop);
 
   // De pagina achter een knop uit onze eigen mail. Hij toont alleen wat er
   // gaat gebeuren; pas de knop op die pagina voert het uit.
@@ -397,6 +410,11 @@ function rijGegevens(soort, d) {
   VRAGEN[soort].forEach(function (v) {
     rij[v.label] = tekstOf(d[v.sleutel], '');
   });
+  // Bij een geboekt gesprek: het kenmerk en het tijdstip. Daar hangt de hele
+  // opvolging aan (zie Opvolging.gs); de student ziet ze nergens.
+  if (soort === 'afspraak' && d.ref) rij['Ref'] = d.ref;
+  if (soort === 'afspraak' && d.gesprekOp instanceof Date) rij['Gesprek op'] = d.gesprekOp;
+  if (soort === 'afspraak' && d.door) rij['Door'] = d.door;
   // Geen kolom "Afgehandeld" meer: die is vervangen door Status en Contact
   // person, die met de hand vooraan in het tabblad zijn gezet. Zou hij hier
   // blijven staan, dan kwam hij bij de volgende aanvraag weer achteraan
