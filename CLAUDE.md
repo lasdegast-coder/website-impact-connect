@@ -130,8 +130,9 @@ contact@impactconnectutrecht.com.
 Er zijn twee Google Sheets. Er staan namen en mailadressen in, dus deel ze
 alleen met het team en publiceer ze nooit.
 
-- **LINKED TO WEBSITE Alumni overview**: de aanmeldingen van alumni. Het
-  script leest hieruit en schrijft er nooit in. De koppeling staat bij
+- **LINKED TO WEBSITE alumni database**: de antwoorden van het
+  aanmeldformulier voor alumni, dus nieuwe aanmeldingen komen vanzelf op de
+  site. Het script leest hieruit en schrijft er nooit in. De koppeling staat bij
   `ALUMNI_BESTAND_ID` bovenin `Loket.gs`.
 - **LINKED TO BOT Gesprek Aanvragen en Alumni Gesprek Aanvragen**: hier hangt
   het Apps Script aan (Extensies → Apps Script) en hierin schrijft het:
