@@ -124,3 +124,59 @@ contact@impactconnectutrecht.com.
   (bij de agenda `agendaTest`) en op Toestaan klikken, en pas daarna `git push`.
 - Zet `&vers=1` achter `FORM_ENDPOINT?lijst=alumni` om de cache van vijf
   minuten over te slaan als je een verse versie wilt controleren.
+
+## De sheets
+
+Er zijn twee Google Sheets. Er staan namen en mailadressen in, dus deel ze
+alleen met het team en publiceer ze nooit.
+
+- **LINKED TO WEBSITE Alumni overview**: de aanmeldingen van alumni. Het
+  script leest hieruit en schrijft er nooit in. De koppeling staat bij
+  `ALUMNI_BESTAND_ID` bovenin `Loket.gs`.
+- **LINKED TO BOT Gesprek Aanvragen en Alumni Gesprek Aanvragen**: hier hangt
+  het Apps Script aan (Extensies → Apps Script) en hierin schrijft het:
+
+| tabblad | wat erin komt |
+|---|---|
+| aanvragen voor gesprekken | Het afspraakformulier. Status en Contact person houden jullie zelf bij; het script laat die kolommen met rust. |
+| Alumni introducties | Het alumniloket: per aanvraag de vraag, de drie kandidaten, wie we kozen, en drie weken later het cijfer en de toelichting van de student. |
+| Alumni die we nog missen | Het formulier onder de lijst, voor als er niemand past. Dit is de wervingslijst. |
+| Berichten | Het contactformulier. Verschijnt bij het eerste bericht. |
+
+Tabbladen hernoemen en kolommen verslepen mag. **Kolomkoppen hernoemen niet**:
+het script schrijft op kolomnaam, dus een hernoemde kop krijgt een nieuwe
+kolom ernaast.
+
+## Hulpfuncties in de Apps Script-editor
+
+Klik eerst links op `Loket.gs`; het menu naast Uitvoeren toont alleen de
+functies uit het bestand dat open staat.
+
+- `zelftestLoket`: controleert de koppeling met beide sheets.
+- `loketOverzicht`: wie vol zit, wie geen thema heeft, en welke woorden uit
+  "Fields of interest" nog nergens onder vallen. Vul die aan in `THEMAS`.
+- `toonRuimte`: waarom iemand op vol staat.
+- `toonNavraagWachtrij`: wie de cijfermail krijgt, zonder iets te versturen.
+- `testNavraagNu`: stuurt de cijfermail over de laatste introductie meteen,
+  zonder de sheet te veranderen.
+- `zetNavraagTriggerAan` en `zetNavraagTriggerUit`: de dagelijkse navraag drie
+  weken na een introductie. Staat aan.
+- `wisAlumniCache`: de lijst op de site meteen verversen.
+
+## Testen zonder echte alumni
+
+- In de alumnisheet staat een regel waarvan de naam met "Test" begint.
+  Studenten zien die niet; hij verschijnt alleen op
+  impactconnectutrecht.com/alumni.html?test=1
+- Kies in de teammail met de drie kandidaten altijd het testprofiel, nooit een
+  echte alumnus. Anders krijgt een echt iemand een testintroductie.
+- Laat de frequentiekolom van het testprofiel leeg, dan raakt het nooit vol.
+
+## Teksten
+
+- Wat studenten en alumni lezen, op de site en in de mails, is Engels.
+- Geen gedachtestreepjes midden in een zin; gebruik een komma of een punt.
+- Beloof geen termijnen ("within three working days"). Zeg wel dat het
+  antwoord per mail komt.
+- Laat een nieuwe of veranderde tekst eerst als voorstel zien, ook in de mails,
+  en bouw pas na akkoord.
