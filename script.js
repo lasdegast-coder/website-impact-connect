@@ -2076,9 +2076,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (e.key === "Escape" && $("#panel-root")) closePanel();
   });
-  // dropdown ook bruikbaar op touch
+  /* Het uitklapmenu onder Programmes, op een scherm zonder muis. Daar bestaat
+     hover niet, dus daar klapt een tik het open.
+
+     Alleen niet op een telefoon: daar staat het menu al als paneel onder de
+     balk en is het uitklapmenu verborgen (zie styles.css, max-width 1000px).
+     Zonder die extra voorwaarde slokte deze regel de tik op en kwam je nooit
+     op de programmapagina. */
   $$(".nav-drop > .nav-link").forEach((a) => a.addEventListener("click", (e) => {
-    if (window.matchMedia("(hover: none)").matches) {
+    if (window.matchMedia("(hover: none) and (min-width: 1001px)").matches) {
       e.preventDefault();
       a.parentElement.classList.toggle("open");
     }

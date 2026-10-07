@@ -1514,6 +1514,11 @@ body::before {
   /* De programma's hebben op breed scherm een uitklapmenu bij hover. Op
      een telefoon bestaat hover niet, dus daar is het gewoon een link. */
   .site-nav .nav-drop { display: block; }
+  /* De link zit hier in een blokje voor het uitklapmenu op een breed scherm.
+     Zonder deze regel is alleen het woord zelf aan te tikken en is de rest
+     van de regel dood, terwijl de andere menuregels over de volle breedte
+     werken. */
+  .site-nav .nav-drop .nav-link { display: flex; }
   .site-nav .nav-drop-menu { display: none !important; }
   .site-nav .nav-caret { display: none; }
   .nav-cta { width: 100%; justify-content: center; margin-top: 10px; padding: 13px 18px; }
