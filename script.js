@@ -2589,15 +2589,27 @@ function initMenu() {
   const kop = $(".site-header");
   if (!knop || !kop) return;
 
-  const teken = () => {
-    const open = kop.classList.contains("menu-open");
-    knop.innerHTML = icon(open ? "X" : "Menu", 22);
+  // Allebei de icoontjes staan er één keer in; CSS laat zien welke past.
+  // Ze opnieuw tekenen bij elke tik ging mis: het plaatje waarop je tikte
+  // verdween dan uit de pagina, en de regel "een klik buiten de balk sluit
+  // het menu" hieronder dacht daardoor dat je buiten de balk had getikt en
+  // sloot het meteen weer. Op een telefoon tik je altijd op het icoontje,
+  // dus daar leek de knop stuk.
+  knop.innerHTML = `<span class="icoon-open">${icon("Menu", 22)}</span>`
+    + `<span class="icoon-dicht">${icon("X", 22)}</span>`;
+
+  const zet = (open) => {
+    kop.classList.toggle("menu-open", open);
     knop.setAttribute("aria-expanded", open ? "true" : "false");
   };
-  const zet = (open) => { kop.classList.toggle("menu-open", open); teken(); };
 
-  teken();
-  knop.addEventListener("click", () => zet(!kop.classList.contains("menu-open")));
+  zet(false);
+  knop.addEventListener("click", (e) => {
+    // Niet doorgeven aan de pagina: anders sluit de regel hieronder het
+    // menu in dezelfde tik weer.
+    e.stopPropagation();
+    zet(!kop.classList.contains("menu-open"));
+  });
 
   // Doorklikken naar een andere pagina hoort het menu te sluiten. De knop
   // die het afspraakvenster opent ook: anders staat het menu er open achter.

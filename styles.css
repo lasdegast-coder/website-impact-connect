@@ -1490,6 +1490,9 @@ body::before {
   padding: 8px 10px; cursor: pointer; color: var(--dark); line-height: 0;
 }
 .nav-toggle:hover { border-color: var(--sand); }
+/* Het kruisje verschijnt pas als het menu openstaat. */
+.nav-toggle .icoon-dicht, .site-header.menu-open .nav-toggle .icoon-open { display: none; }
+.site-header.menu-open .nav-toggle .icoon-dicht { display: inline-flex; }
 
 @media (max-width: 1000px) {
   .site-header { flex-wrap: nowrap; padding: 12px 5vw; }
