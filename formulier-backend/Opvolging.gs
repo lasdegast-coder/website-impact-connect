@@ -64,7 +64,7 @@ const VERVOLGEN = [
    er zelf achter; verslepen mag, hernoemen niet. */
 const OPVOLGING_KOLOMMEN = [
   'Ref', 'Gesprek op', 'Door', 'Teammail op', 'Herinnerd op',
-  'Aangeraden programma\'s', 'Voorgestelde alumni', 'Vastgelegd op',
+  'Aangeraden programma\'s', 'Extra tip', 'Voorgestelde alumni', 'Vastgelegd op',
   'Nagevraagd op', 'Cijfer', 'Vervolg', 'Toelichting', 'Beantwoord op',
   'Maandmail op', 'Uitkomst', 'Uitkomst toelichting', 'Uitkomst op',
   'Geen mail meer',
@@ -127,6 +127,7 @@ function opvolgingRegels() {
       teammailOp: String(lees('Teammail op')).trim(),
       herinnerdOp: String(lees('Herinnerd op')).trim(),
       programmas: String(lees('Aangeraden programma\'s')).trim(),
+      extra: String(lees('Extra tip')).trim(),
       vastgelegdOp: String(lees('Vastgelegd op')).trim(),
       nagevraagdOp: String(lees('Nagevraagd op')).trim(),
       cijfer: String(lees('Cijfer')).trim(),
@@ -267,18 +268,41 @@ function stuurHerinnering(regel) {
 
 /* ---- de mail aan de student ------------------------------------------ */
 
-function cijferKnoppen(ref) {
-  const regels = [];
+/* De mail gaat er twee keer in: als opgemaakte versie en als kale tekst.
+   Vrijwel iedereen ziet de eerste, waarin de naam van een programma zelf de
+   link is. Wie opmaak heeft uitgezet krijgt de tweede, met de adressen
+   voluit. Zo staat er nooit een rij kale scriptlinks in beeld. */
+
+// Let op: enkele aanhalingstekens om Segoe UI. De hele stijl komt in een
+// style="..." te staan; met dubbele knipt de browser de regel daar af.
+const MAIL_BLAD = "font:16px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',"
+  + "Helvetica,Arial,sans-serif;color:#23291F;max-width:560px";
+const MAIL_LINK = 'color:#13352A;font-weight:600';
+const MAIL_KOP = 'font-weight:600;color:#13352A;margin:26px 0 6px';
+const MAIL_CIJFER = 'display:inline-block;min-width:34px;padding:9px 0;margin:0 6px 6px 0;'
+  + 'border:1.5px solid #13352A;border-radius:99px;text-align:center;'
+  + 'text-decoration:none;color:#13352A;font-weight:600';
+const MAIL_KLEIN = 'font-size:13px;color:#6B7065';
+
+function cijferLinks(ref) {
+  const uit = [];
   for (let c = 1; c <= CIJFER_MAX; c++) {
-    regels.push('  ' + c + ' – ' + webAdres() + '?gcijfer='
-      + encodeURIComponent(maakToken('gcijfer', ref, String(c), OPVOLGING_LINK_STUDENT)));
+    uit.push({
+      cijfer: c,
+      url: webAdres() + '?gcijfer='
+        + encodeURIComponent(maakToken('gcijfer', ref, String(c), OPVOLGING_LINK_STUDENT)),
+    });
   }
-  return regels;
+  return uit;
+}
+
+function afmeldLink(ref) {
+  return webAdres() + '?gstop='
+    + encodeURIComponent(maakToken('gstop', ref, '', OPVOLGING_LINK_STUDENT));
 }
 
 function afmeldRegel(ref) {
-  return 'No more mails about this conversation: ' + webAdres() + '?gstop='
-    + encodeURIComponent(maakToken('gstop', ref, '', OPVOLGING_LINK_STUDENT));
+  return 'No more mails about this conversation: ' + afmeldLink(ref);
 }
 
 function stuurCijferMail(regel) {
@@ -288,65 +312,173 @@ function stuurCijferMail(regel) {
     name: AFZENDERNAAM,
     replyTo: ONTVANGER,
     body: opvolgMailTekst(regel),
+    htmlBody: opvolgMailHtml(regel),
   });
   opvolgingSchrijf(regel, 'Nagevraagd op', opvolgingNu());
 }
 
-/* De mail zelf. Alles wat jullie hebben aangevinkt komt hierin terecht: de
-   programma's met hun zin en adres uit de programmasheet, en de alumni zonder
-   naam, met een knop die het gewone aanvraagproces op de site start. Heeft
-   niemand iets aangevinkt, dan vallen die blokken weg en blijft er een warme
-   mail met de cijfervraag over. */
+/* ---- kleine tekstklusjes --------------------------------------------- */
+
+function deelLijst(waarde) {
+  return String(waarde || '').split(/\s*;\s*/)
+    .map(function (s) { return s.trim(); })
+    .filter(String);
+}
+
+/* De beschrijving in de programmasheet is soms een hele alinea. In de mail
+   willen we één regel, anders wordt het rijtje een lap tekst. */
+function korteZin(tekst) {
+  let s = String(tekst || '').replace(/\s+/g, ' ').trim();
+  if (s.length <= 150) return s;
+  const kort = s.slice(0, 150);
+  const spatie = kort.lastIndexOf(' ');
+  return (spatie > 60 ? kort.slice(0, spatie) : kort).replace(/[,;:.]$/, '') + '...';
+}
+
+/* Een losse tip uit het invulformulier eindigt lang niet altijd op een punt. */
+function zinAf(tekst) {
+  const s = String(tekst || '').trim();
+  if (!s) return '';
+  return /[.!?]$/.test(s) ? s : s + '.';
+}
+
+/* ---- waar de mail uit bestaat ----------------------------------------
+   Eén keer verzamelen, zodat de opgemaakte en de kale versie niet uit elkaar
+   kunnen gaan lopen. Een programma zonder adres in de sheet wijst naar onze
+   eigen programmapagina, zodat er nooit een dood rijtje in de mail staat.
+   ------------------------------------------------------------------- */
+function opvolgMailDelen(regel) {
+  const details = programmaDetails();
+  const programmas = deelLijst(regel.programmas).map(function (naam) {
+    const p = details[naam] || {};
+    return {
+      naam: naam,
+      zin: korteZin(p.zin),
+      url: p.url || (SITE_ADRES + '/programmes.html'),
+    };
+  });
+  const alumni = alumniUitSheet(regel).map(function (a) {
+    return {
+      tekst: alumniTeaser(a),
+      url: SITE_ADRES + '/alumni.html?alumnus=' + encodeURIComponent(a.id),
+    };
+  });
+  return {
+    voornaam: voornaam(regel.naam),
+    programmas: programmas,
+    alumni: alumni,
+    tip: zinAf(regel.extra),
+    cijfers: cijferLinks(regel.ref),
+    afmeld: afmeldLink(regel.ref),
+    ondertekening: ondertekening(regel),
+  };
+}
+
+const MAIL_INTRO = [
+  'We hope the meeting with us inspired you or helped you find the next step',
+  'of your journey. We really enjoyed the conversation and getting to know you',
+  'a bit better.',
+];
+const MAIL_ALUMNI = [
+  'In addition, we have some alumni who might be interesting to talk to.',
+  'We can introduce you. One click and we\'ll arrange it:',
+];
+const MAIL_CIJFERVRAAG = 'How was the conversation?';
+const MAIL_CIJFERUITLEG = [
+  'One click, and on the next page you can tell us what you are going to do',
+  'with it. 1 means it did not help much, 5 means it really did.',
+];
+
+/* De kale versie. */
 function opvolgMailTekst(regel) {
-  const regels = ['Hi ' + voornaam(regel.naam) + ',', '',
-    'We hope the meeting with us inspired you or helped you find the next step',
-    'of your journey. We really enjoyed the conversation and getting to know you',
-    'a bit better.'];
+  const d = opvolgMailDelen(regel);
+  const r = ['Hi ' + d.voornaam + ',', ''].concat(MAIL_INTRO);
 
-  const gekozen = regel.programmas.split(/\s*;\s*/).filter(String);
-  if (gekozen.length) {
-    const details = programmaDetails();
-    regels.push('', 'SOME PLACES TO START EXPLORING',
-      'Based on what you shared, here are a few leads worth a look:', '');
-    gekozen.forEach(function (naam) {
-      const p = details[naam];
-      regels.push(' * ' + naam + (p && p.zin ? ' - ' + p.zin : ''));
-      if (p && p.url) regels.push('   ' + p.url);
+  if (d.programmas.length) {
+    r.push('', 'Based on what you shared, here are a few leads worth a look:', '');
+    d.programmas.forEach(function (p) {
+      r.push(' * ' + p.naam + (p.zin ? ': ' + p.zin : ''));
+      r.push('   ' + p.url);
     });
   }
 
-  const alumni = alumniUitSheet(regel);
-  if (alumni.length) {
-    regels.push('', 'ALUMNI WHO MIGHT BE INTERESTING TO TALK TO',
-      'We can introduce you. One click and we\'ll arrange it:', '');
-    alumni.forEach(function (a) {
-      regels.push(' * ' + alumniTeaser(a));
-      regels.push('   ' + SITE_ADRES + '/alumni.html?alumnus=' + encodeURIComponent(a.id));
+  if (d.alumni.length) {
+    r.push.apply(r, [''].concat(MAIL_ALUMNI).concat(['']));
+    d.alumni.forEach(function (a) {
+      r.push(' * ' + a.tekst);
+      r.push('   ' + a.url);
     });
   }
 
-  if (gekozen.length || alumni.length) {
-    regels.push('', 'Take some time to browse these and see what catches your attention.',
-      'Often the best opportunities come from a curious email or a quick chat.',
-      'And if one of them sparks something, we\'d love to hear about it.');
-  }
+  if (d.tip) r.push('', 'One more thing we noted down for you: ' + d.tip);
 
-  regels.push('', 'KEEP GOING',
-    'Finding the right next step can take some time, and that is completely',
-    'normal. The fact that you are actively exploring already puts you in a',
-    'great position.',
-    '', 'One last thing: how was the conversation? One click is enough:', '');
-  cijferKnoppen(regel.ref).forEach(function (r) { regels.push(r); });
+  r.push.apply(r, ['', MAIL_CIJFERVRAAG].concat(MAIL_CIJFERUITLEG).concat(['']));
+  d.cijfers.forEach(function (c) { r.push('  ' + c.cijfer + ' - ' + c.url); });
 
-  regels.push('',
+  r.push('',
     'Join our WhatsApp community: ' + WHATSAPP_LINK,
     'Our door stays open: reply to this mail or write to ' + ONTVANGER + '.',
     'You are always welcome to book another conversation: ' + SITE_ADRES,
     '', 'Good luck, and we hope to hear from you soon.',
-    '', 'Warm regards,', ondertekening(regel), AFZENDERNAAM,
+    '', 'Warm regards,', d.ondertekening, AFZENDERNAAM,
     '', afmeldRegel(regel.ref));
 
-  return regels.join('\n');
+  return r.join('\n');
+}
+
+/* En dezelfde mail met opmaak. */
+function opvolgMailHtml(regel) {
+  const d = opvolgMailDelen(regel);
+  const h = ['<div style="' + MAIL_BLAD + '">'];
+  h.push('<p>Hi ' + ontsnap(d.voornaam) + ',</p>');
+  h.push('<p>' + MAIL_INTRO.join(' ') + '</p>');
+
+  if (d.programmas.length) {
+    h.push('<p>Based on what you shared, here are a few leads worth a look:</p>');
+    h.push('<ul style="padding-left:20px;margin:0">');
+    d.programmas.forEach(function (p) {
+      h.push('<li style="margin:0 0 12px"><a href="' + ontsnap(p.url) + '" style="'
+        + MAIL_LINK + '">' + ontsnap(p.naam) + '</a>'
+        + (p.zin ? '<br><span style="color:#4B5044">' + ontsnap(p.zin) + '</span>' : '')
+        + '</li>');
+    });
+    h.push('</ul>');
+  }
+
+  if (d.alumni.length) {
+    h.push('<p>' + MAIL_ALUMNI.join(' ') + '</p>');
+    h.push('<ul style="padding-left:20px;margin:0">');
+    d.alumni.forEach(function (a) {
+      h.push('<li style="margin:0 0 12px"><a href="' + ontsnap(a.url) + '" style="'
+        + MAIL_LINK + '">' + ontsnap(a.tekst) + '</a></li>');
+    });
+    h.push('</ul>');
+  }
+
+  if (d.tip) {
+    h.push('<p>One more thing we noted down for you: ' + ontsnap(d.tip) + '</p>');
+  }
+
+  h.push('<p style="' + MAIL_KOP + '">' + MAIL_CIJFERVRAAG + '</p>');
+  h.push('<p style="margin:0 0 12px">' + MAIL_CIJFERUITLEG.join(' ') + '</p>');
+  h.push('<p style="margin:0 0 22px">' + d.cijfers.map(function (c) {
+    return '<a href="' + ontsnap(c.url) + '" style="' + MAIL_CIJFER + '">' + c.cijfer + '</a>';
+  }).join('') + '</p>');
+
+  h.push('<p><a href="' + ontsnap(WHATSAPP_LINK) + '" style="' + MAIL_LINK + '">Join our '
+    + 'WhatsApp community</a><br>Our door stays open: reply to this mail or write to '
+    + '<a href="mailto:' + ontsnap(ONTVANGER) + '" style="' + MAIL_LINK + '">'
+    + ontsnap(ONTVANGER) + '</a>.<br>You are always welcome to '
+    + '<a href="' + ontsnap(SITE_ADRES) + '" style="' + MAIL_LINK + '">book another '
+    + 'conversation</a>.</p>');
+
+  h.push('<p>Good luck, and we hope to hear from you soon.</p>');
+  h.push('<p>Warm regards,<br>' + ontsnap(d.ondertekening) + '<br>'
+    + ontsnap(AFZENDERNAAM) + '</p>');
+  h.push('<p style="' + MAIL_KLEIN + '"><a href="' + ontsnap(d.afmeld) + '" style="'
+    + MAIL_KLEIN + '">No more mails about this conversation</a></p>');
+  h.push('</div>');
+  return h.join('');
 }
 
 /* Onder de mail de naam van wie het gesprek deed. Op woensdag staat er in de
@@ -367,21 +499,47 @@ function alumniUitSheet(regel) {
 }
 
 function stuurMaandMail(regel) {
-  const knoppen = UITKOMSTEN.map(function (u) {
-    return '  ' + u.knop + ' – ' + webAdres() + '?guitkomst='
-      + encodeURIComponent(maakToken('guitkomst', regel.ref, u.id, OPVOLGING_LINK_STUDENT));
+  const keuzes = UITKOMSTEN.map(function (u) {
+    return {
+      knop: u.knop,
+      url: webAdres() + '?guitkomst='
+        + encodeURIComponent(maakToken('guitkomst', regel.ref, u.id, OPVOLGING_LINK_STUDENT)),
+    };
   });
+  const opening = ['Hi ' + voornaam(regel.naam) + ',', '',
+    'A month ago we talked about what you could do beside your studies.',
+    'Where did you land?'];
+  const slot = 'One click, and you can add a line on the next page.';
+
+  const tekst = opening.concat([''])
+    .concat(keuzes.map(function (k) { return '  ' + k.knop + ' - ' + k.url; }))
+    .concat(['', slot, '', 'Best,', AFZENDERNAAM, ONTVANGER, '', afmeldRegel(regel.ref)])
+    .join('\n');
+
+  const html = ['<div style="' + MAIL_BLAD + '">',
+    '<p>Hi ' + ontsnap(voornaam(regel.naam)) + ',</p>',
+    '<p>A month ago we talked about what you could do beside your studies. '
+      + 'Where did you land?</p>',
+    '<p style="margin:0 0 6px">' + keuzes.map(function (k) {
+      return '<a href="' + ontsnap(k.url) + '" style="display:inline-block;'
+        + 'border:1.5px solid #13352A;border-radius:99px;padding:9px 16px;'
+        + 'margin:0 6px 8px 0;text-decoration:none;color:#13352A;font-weight:600">'
+        + ontsnap(k.knop) + '</a>';
+    }).join('') + '</p>',
+    '<p>' + slot + '</p>',
+    '<p>Best,<br>' + ontsnap(AFZENDERNAAM) + '<br><a href="mailto:' + ontsnap(ONTVANGER)
+      + '" style="' + MAIL_LINK + '">' + ontsnap(ONTVANGER) + '</a></p>',
+    '<p style="' + MAIL_KLEIN + '"><a href="' + ontsnap(afmeldLink(regel.ref))
+      + '" style="' + MAIL_KLEIN + '">No more mails about this conversation</a></p>',
+    '</div>'].join('');
+
   MailApp.sendEmail({
     to: regel.email,
     subject: 'Did anything come of it?',
     name: AFZENDERNAAM,
     replyTo: ONTVANGER,
-    body: ['Hi ' + voornaam(regel.naam) + ',', '',
-      'A month ago we talked about what you could do beside your studies.',
-      'Where did you land?', '']
-      .concat(knoppen)
-      .concat(['', 'One click, and you can add a line on the next page.', '',
-        'Best,', AFZENDERNAAM, ONTVANGER, '', afmeldRegel(regel.ref)]).join('\n'),
+    body: tekst,
+    htmlBody: html,
   });
   opvolgingSchrijf(regel, 'Maandmail op', opvolgingNu());
 }
@@ -444,7 +602,10 @@ function opvolgingDagelijks() {
 
 /* ---- de pagina's achter de knoppen ----------------------------------- */
 
-/* Onze eigen pagina: welke programma's heb je aangeraden? */
+/* Onze eigen pagina: welke programma's heb je aangeraden?
+   Boven de alumni staan de vijf die het beste bij de vraag passen, met de
+   reden erbij. Ben je het daar niet mee eens, dan staat de hele lijst er
+   onder; het zoekveld bovenaan zoekt in allebei. */
 function opvolgingTeamPagina(token) {
   const p = leesToken(token, 'gteam');
   if (!p) return loketPagina('Deze link werkt niet meer',
@@ -465,37 +626,47 @@ function opvolgingTeamPagina(token) {
 
   // Alumni: hier staan de namen wel, want dit is onze eigen pagina. In de mail
   // aan de student staan ze niet; die vraagt zelf een introductie aan.
-  const alGekozen = String(regel.alumni || '').split(/\s*;\s*/).filter(String);
-  const voorstellen = alumniVoorstellen(regel, 5).map(function (v) {
+  const alGekozen = deelLijst(regel.alumni);
+  const gesorteerd = alumniVoorstellen(regel, 0);
+  const vinkje = function (v, metReden) {
+    const aan = alGekozen.indexOf(v.a.id) !== -1 ? ' checked' : '';
     const reden = [
       v.gedeeld.length ? v.gedeeld.length + ' gedeeld thema' + (v.gedeeld.length === 1 ? '' : "'s")
         + ' (' + v.gedeeld.join(', ') + ')' : 'geen gedeeld thema',
       v.a.ruimte.onbeperkt ? 'onbeperkt beschikbaar' : 'nog ' + v.a.ruimte.over + ' plek'
         + (v.a.ruimte.over === 1 ? '' : 'ken') + ' deze ' + v.a.ruimte.periode,
     ].join(' · ');
-    const aan = alGekozen.indexOf(v.a.id) !== -1 ? ' checked' : '';
     return '<label class="keuze"><input type="checkbox" name="alumnus" value="'
       + ontsnap(v.a.id) + '"' + aan + '> <strong>' + ontsnap(v.a.naam) + '</strong> — '
-      + ontsnap(alumniTeaser(v.a)) + '<br><span class="reden">' + ontsnap(reden)
-      + '</span></label>';
-  }).join('');
+      + ontsnap(alumniTeaser(v.a))
+      + (metReden ? '<br><span class="reden">' + ontsnap(reden) + '</span>' : '')
+      + '</label>';
+  };
+  const voorstellen = gesorteerd.slice(0, 5).map(function (v) { return vinkje(v, true); }).join('');
+  const overige = gesorteerd.slice(5);
+  const rest = overige.length
+    ? '<details id="rest"><summary>Liever iemand anders? Alle ' + overige.length
+      + ' andere alumni</summary><div class="groep">'
+      + overige.map(function (v) { return vinkje(v, false); }).join('')
+      + '</div></details>'
+    : '';
 
   return loketPagina('Wat heb je ' + ontsnap(voornaam(regel.naam)) + ' aangeraden?',
     'Vink aan wat je hebt genoemd. Zodra je opslaat, krijgt '
       + ontsnap(voornaam(regel.naam)) + ' de vraag hoe het gesprek was.',
-    '<input id="zoek" placeholder="Zoeken…" oninput="filter(this.value)">'
+    '<input id="zoek" placeholder="Zoeken in programma\'s en alumni…" oninput="filter(this.value)">'
     + '<form method="post" action="' + webAdres() + '">'
     + '<input type="hidden" name="formulier" value="gesprekteam">'
     + '<input type="hidden" name="token" value="' + ontsnap(token) + '">'
     + '<div id="lijst">' + lijst + '</div>'
     + '<label class="los">Iets anders (een stage, een persoon, een tip)</label>'
-    + '<textarea name="anders" rows="2"></textarea>'
+    + '<textarea name="anders" rows="2">' + ontsnap(regel.extra) + '</textarea>'
     + (voorstellen
-      ? '<h2>Alumni die zouden passen</h2>'
+      ? '<div id="alumni"><h2>Alumni die zouden passen</h2>'
         + '<p class="uitleg">In de mail staat geen naam. De student ziet alleen de '
         + 'studie en de huidige rol, met een knop om een introductie aan te vragen. '
-        + 'Die aanvraag komt bij ons langs zoals altijd.</p>'
-        + voorstellen
+        + 'Die aanvraag komt bij ons langs zoals altijd. Je mag er meerdere aanvinken.</p>'
+        + voorstellen + rest + '</div>'
       : '')
     + '<button type="submit">Opslaan</button></form>'
     + '<style>#zoek{font:inherit;width:100%;box-sizing:border-box;padding:11px 13px;'
@@ -504,12 +675,15 @@ function opvolgingTeamPagina(token) {
     + 'color:#7a7468;margin:16px 0 6px}.keuze{display:block;padding:5px 0;font-size:15px}'
     + '.los{display:block;font-weight:600;margin:16px 0 6px}'
     + '.reden{color:#7a7468;font-size:12.5px}'
+    + 'summary{cursor:pointer;color:#13352A;font-size:14px;margin:10px 0 4px}'
     + '.uitleg{font-size:13px;color:#4B5044;margin:0 0 10px}</style>'
     + '<script>function filter(q){q=q.toLowerCase();'
-    + 'document.querySelectorAll("#lijst .keuze").forEach(function(l){'
+    + 'document.querySelectorAll("#lijst .keuze,#alumni .keuze").forEach(function(l){'
     + 'l.style.display=l.textContent.toLowerCase().indexOf(q)===-1?"none":"block";});'
     + 'document.querySelectorAll("#lijst h2").forEach(function(h){var g=h.nextElementSibling;'
-    + 'h.style.display=g.querySelector(".keuze:not([style*=none])")?"block":"none";});}</script>');
+    + 'h.style.display=g.querySelector(".keuze:not([style*=none])")?"block":"none";});'
+    // Zoeken terwijl de rest dichtgeklapt is, zou treffers verstoppen.
+    + 'var r=document.getElementById("rest");if(r)r.open=q.length>0;}</script>');
 }
 
 /* De programma's uit de programmasheet, per tabblad, met de korte zin en het
@@ -530,7 +704,10 @@ function programmaKeuzes() {
         return -1;
       };
       const kNaam = vind('programme name');
-      const kZin = vind('one-liner');
+      // De programmasheet heeft (nog) geen kolom one-liner; dan pakken we de
+      // beschrijving. In de mail korten we die in tot één regel.
+      let kZin = vind('one-liner');
+      if (kZin === -1) kZin = vind('description');
       const kUrl = vind('url');
       if (kNaam === -1) return null;
 
@@ -583,7 +760,7 @@ function alumniVoorstellen(regel, hoeveel) {
       return { a: a, punten: punten, gedeeld: gedeeld };
     })
     .sort(function (x, y) { return y.punten - x.punten; })
-    .slice(0, hoeveel || 5);
+    .slice(0, hoeveel === 0 ? undefined : (hoeveel || 5));
 }
 
 /* Hoe een alumnus in de mail staat: zonder naam, net als op de site. */
@@ -604,30 +781,43 @@ function opvolgingTeamOpslaan(parameter) {
   if (!Array.isArray(gekozen)) gekozen = [gekozen];
   let alumni = parameter.alumnus || [];
   if (!Array.isArray(alumni)) alumni = [alumni];
+  // De losse tip krijgt een eigen kolom. Stond hij tussen de programma's,
+  // dan kwam hij in de mail als los programma in het rijtje te staan.
   const anders = tekstOf(parameter.anders, '');
-  const alles = gekozen.concat(anders ? [anders] : []).join('; ');
 
   let gemaild = false;
+  let alEerder = false;
   metSlot(function () {
-    opvolgingSchrijf(regel, 'Aangeraden programma\'s', alles);
+    opvolgingSchrijf(regel, 'Aangeraden programma\'s', gekozen.join('; '));
+    opvolgingSchrijf(regel, 'Extra tip', anders);
     opvolgingSchrijf(regel, 'Voorgestelde alumni', alumni.join('; '));
     opvolgingSchrijf(regel, 'Vastgelegd op', opvolgingNu());
     const vers = opvolgingZoek(p.ref);
-    if (vers && !vers.nagevraagdOp && !opvolgingSlaOver(vers) && magStudentNuMailen()) {
+    if (!vers || opvolgingSlaOver(vers)) return;
+    if (vers.nagevraagdOp) { alEerder = true; return; }
+    if (magStudentNuMailen()) {
       stuurCijferMail(vers);
       gemaild = true;
     }
   });
 
-  return loketPagina('Opgeslagen',
-    (alles ? 'Vastgelegd: ' + ontsnap(alles) + '. ' : 'Niets aangeraden, ook goed. ')
-    + (gemaild
-      ? 'De mail met de cijfervraag is onderweg naar ' + ontsnap(voornaam(regel.naam)) + '.'
-      : 'Het is nu buiten mailtijd, dus ' + ontsnap(voornaam(regel.naam))
-        + ' krijgt de vraag morgenochtend om 09:00.'));
+  const naam = ontsnap(voornaam(regel.naam));
+  const wat = gekozen.length
+    ? 'Vastgelegd: ' + ontsnap(gekozen.join('; ')) + '. '
+    : (anders ? 'Vastgelegd. ' : 'Niets aangeraden, ook goed. ');
+  const hoe = alEerder
+    ? naam + ' heeft de mail al gehad, dus die gaat niet nog een keer de deur uit.'
+    : gemaild
+      ? 'De mail is onderweg naar ' + naam + '.'
+      : 'Het is nu buiten mailtijd, dus ' + naam + ' krijgt de mail morgenochtend om 09:00.';
+  return loketPagina('Opgeslagen', wat + hoe);
 }
 
-/* Het cijfer van de student. Eén klik is genoeg; dat leggen we meteen vast. */
+/* Het cijfer van de student. De klik in de mail legt het cijfer meteen vast;
+   daarna staat alles op één pagina. Je kiest wat je ermee gaat doen en typt
+   erbij wat je van plan bent, en pas op Send gaat het weg. Eerder sloot een
+   klik op zo'n keuze de pagina meteen af, en dan hadden we wel een vinkje
+   maar geen enkel woord. */
 function opvolgingCijferPagina(token) {
   const p = leesToken(token, 'gcijfer');
   if (!p) return loketPagina('This link no longer works',
@@ -643,35 +833,45 @@ function opvolgingCijferPagina(token) {
   });
   if (cijfer <= CIJFER_LAAG) meldLaagCijfer(regel, cijfer);
 
-  const knoppen = VERVOLGEN.map(function (v) {
-    return '<a class="knop" href="' + webAdres() + '?gvervolg='
-      + encodeURIComponent(maakToken('gvervolg', regel.ref, v.id, OPVOLGING_LINK_STUDENT))
-      + '">' + ontsnap(v.knop) + '</a>';
-  }).join(' ');
+  const keuzes = VERVOLGEN.map(function (v) {
+    return '<label class="keuze"><input type="radio" name="vervolg" value="'
+      + ontsnap(v.id) + '"><span>' + ontsnap(v.knop) + '</span></label>';
+  }).join('');
 
   return loketPagina('Thanks, you gave it a ' + cijfer + ' out of ' + CIJFER_MAX,
     'One more thing, if you have a minute: are you going to do something with '
     + 'what we discussed?',
-    knoppen
-    + '<form method="post" action="' + webAdres() + '" style="margin-top:22px">'
+    '<form method="post" action="' + webAdres() + '">'
     + '<input type="hidden" name="formulier" value="gesprekcijfer">'
     + '<input type="hidden" name="token" value="' + ontsnap(token) + '">'
-    + '<label class="los">Anything we should do differently?</label>'
-    + '<textarea name="tekst" rows="3"></textarea>'
+    + '<div class="keuzes">' + keuzes + '</div>'
+    + '<label class="los">What are you planning to do next? And is there anything '
+    + 'we should do differently?</label>'
+    + '<textarea name="tekst" rows="4"></textarea>'
     + '<button type="submit">Send</button></form>'
-    + '<style>.knop{display:inline-block;border:1.5px solid #13352A;border-radius:99px;'
-    + 'padding:9px 16px;margin:0 6px 8px 0;text-decoration:none;color:#13352A;font-size:14px}'
-    + '.knop:hover{background:#13352A;color:#F4EFE3}'
+    + '<style>.keuzes{margin:0 0 22px}'
+    + '.keuze{display:inline-block;margin:0 8px 8px 0;cursor:pointer}'
+    + '.keuze input{position:absolute;opacity:0;width:0;height:0}'
+    + '.keuze span{display:inline-block;border:1.5px solid #13352A;border-radius:99px;'
+    + 'padding:9px 16px;font-size:14px;color:#13352A}'
+    + '.keuze input:checked+span{background:#13352A;color:#F4EFE3}'
+    + '.keuze input:focus+span{box-shadow:0 0 0 3px rgba(43,107,79,.25)}'
     + '.los{display:block;font-weight:600;margin:0 0 6px}</style>');
 }
 
+/* De losse knoppen uit mails van vóór deze pagina. Die blijven werken. */
 function opvolgingVervolgPagina(token) {
   const p = leesToken(token, 'gvervolg');
   if (!p) return loketPagina('This link no longer works', 'Just reply to our mail instead.');
   const regel = opvolgingZoek(p.ref);
   if (!regel) return loketPagina('We can\'t find that conversation', 'Reply to our mail.');
-  metSlot(function () { opvolgingSchrijf(regel, 'Vervolg', p.keuze); });
+  metSlot(function () { opvolgingSchrijf(regel, 'Vervolg', vervolgTekst(p.keuze)); });
   return loketPagina('Noted', 'Thanks, that helps us a lot. You can close this window.');
+}
+
+function vervolgTekst(id) {
+  const gevonden = VERVOLGEN.filter(function (v) { return v.id === id; })[0];
+  return gevonden ? gevonden.knop : String(id || '');
 }
 
 function opvolgingTekstOpslaan(parameter) {
@@ -679,9 +879,15 @@ function opvolgingTekstOpslaan(parameter) {
   if (!p) return loketPagina('This link no longer works', 'Just reply to our mail instead.');
   const regel = opvolgingZoek(p.ref);
   if (!regel) return loketPagina('We can\'t find that conversation', 'Reply to our mail.');
+
+  const keuze = tekstOf(parameter.vervolg, '');
   const tekst = tekstOf(parameter.tekst, '');
-  if (tekst) metSlot(function () { opvolgingSchrijf(regel, 'Toelichting', tekst); });
-  return loketPagina('Thank you', tekst
+  metSlot(function () {
+    if (keuze) opvolgingSchrijf(regel, 'Vervolg', vervolgTekst(keuze));
+    if (tekst) opvolgingSchrijf(regel, 'Toelichting', tekst);
+  });
+
+  return loketPagina('Thank you', keuze || tekst
     ? 'We\'ve got it. This is exactly what we use to make the next conversation better.'
     : 'Your score is in. You can close this window.');
 }

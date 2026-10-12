@@ -278,7 +278,19 @@ function lees(e) {
   if (e && e.postData && e.postData.contents) {
     try { return JSON.parse(e.postData.contents); } catch (err) { /* dan hieronder */ }
   }
-  return (e && e.parameter) || {};
+  if (!e || !e.parameter) return {};
+
+  // Google geeft een formulierveld in e.parameter maar één keer terug. Staan er
+  // meer vinkjes met dezelfde naam aangekruist, dan staan die alleen in
+  // e.parameters. Zonder dit kwam er van vijf aangevinkte programma's één aan.
+  const d = {};
+  Object.keys(e.parameter).forEach(function (naam) { d[naam] = e.parameter[naam]; });
+  if (e.parameters) {
+    Object.keys(e.parameters).forEach(function (naam) {
+      if (e.parameters[naam] && e.parameters[naam].length > 1) d[naam] = e.parameters[naam];
+    });
+  }
+  return d;
 }
 
 /* Eén cel in Google Sheets kan niet meer dan 50.000 tekens hebben, en dan
