@@ -289,7 +289,7 @@ function cijferLinks(ref) {
   for (let c = 1; c <= CIJFER_MAX; c++) {
     uit.push({
       cijfer: c,
-      url: webAdres() + '?gcijfer='
+      url: SITE_ADRES + '/feedback.html?score=' + c + '&t='
         + encodeURIComponent(maakToken('gcijfer', ref, String(c), OPVOLGING_LINK_STUDENT)),
     });
   }
@@ -297,7 +297,7 @@ function cijferLinks(ref) {
 }
 
 function afmeldLink(ref) {
-  return webAdres() + '?gstop='
+  return SITE_ADRES + '/feedback.html?stop=1&t='
     + encodeURIComponent(maakToken('gstop', ref, '', OPVOLGING_LINK_STUDENT));
 }
 
@@ -419,6 +419,7 @@ function opvolgMailTekst(regel) {
     'Join our WhatsApp community: ' + WHATSAPP_LINK,
     'Our door stays open: reply to this mail or write to ' + ONTVANGER + '.',
     'You are always welcome to book another conversation: ' + SITE_ADRES,
+    '', 'If you still have any questions, please don\'t hesitate to ask them!',
     '', 'Good luck, and we hope to hear from you soon.',
     '', 'Warm regards,', d.ondertekening, AFZENDERNAAM,
     '', afmeldRegel(regel.ref));
@@ -472,6 +473,7 @@ function opvolgMailHtml(regel) {
     + '<a href="' + ontsnap(SITE_ADRES) + '" style="' + MAIL_LINK + '">book another '
     + 'conversation</a>.</p>');
 
+  h.push('<p>If you still have any questions, please don&#39;t hesitate to ask them!</p>');
   h.push('<p>Good luck, and we hope to hear from you soon.</p>');
   h.push('<p>Warm regards,<br>' + ontsnap(d.ondertekening) + '<br>'
     + ontsnap(AFZENDERNAAM) + '</p>');
@@ -502,7 +504,7 @@ function stuurMaandMail(regel) {
   const keuzes = UITKOMSTEN.map(function (u) {
     return {
       knop: u.knop,
-      url: webAdres() + '?guitkomst='
+      url: SITE_ADRES + '/feedback.html?outcome=' + encodeURIComponent(u.id) + '&t='
         + encodeURIComponent(maakToken('guitkomst', regel.ref, u.id, OPVOLGING_LINK_STUDENT)),
     };
   });
@@ -811,6 +813,72 @@ function opvolgingTeamOpslaan(parameter) {
       ? 'De mail is onderweg naar ' + naam + '.'
       : 'Het is nu buiten mailtijd, dus ' + naam + ' krijgt de mail morgenochtend om 09:00.';
   return loketPagina('Opgeslagen', wat + hoe);
+}
+
+/* ---- de knoppen uit de mails, afgehandeld vanaf onze eigen site -------
+   De student klikt op impactconnectutrecht.com/feedback.html, en die pagina
+   stuurt het hierheen, net zoals de formulieren op de site dat doen. Daarom
+   geven we hier gegevens terug en geen pagina.
+
+   Waarom niet gewoon een pagina op script.google.com, zoals eerst? Google
+   stuurt zo'n adres door naar het Google-account waarmee de bezoeker toevallig
+   is ingelogd (.../macros/u/4/s/...). Kent dat account dit script niet, dan
+   krijgt hij "Kan het bestand momenteel niet openen" te zien en is zijn cijfer
+   weg. Op onze eigen site speelt dat niet.
+
+   De pagina's hieronder (opvolgingCijferPagina en de rest) blijven bestaan
+   voor de mails die al verstuurd waren.
+   ------------------------------------------------------------------- */
+function opvolgingWeb(d) {
+  const stap = String(d.stap || '');
+  const soort = (stap === 'uitkomst' || stap === 'uitkomsttekst') ? 'guitkomst'
+    : stap === 'stop' ? 'gstop' : 'gcijfer';
+  const p = leesToken(d.token, soort);
+  if (!p) return antwoord({ ok: false, reden: 'link' });
+  const regel = opvolgingZoek(p.ref);
+  if (!regel) return antwoord({ ok: false, reden: 'onbekend' });
+
+  if (stap === 'cijfer') {
+    const cijfer = Math.max(1, Math.min(CIJFER_MAX, parseInt(p.keuze, 10) || 0));
+    metSlot(function () {
+      opvolgingSchrijf(regel, 'Cijfer', cijfer);
+      opvolgingSchrijf(regel, 'Beantwoord op', opvolgingNu());
+    });
+    if (cijfer <= CIJFER_LAAG) meldLaagCijfer(regel, cijfer);
+    return antwoord({ ok: true, cijfer: cijfer, max: CIJFER_MAX, vervolgen: VERVOLGEN });
+  }
+
+  if (stap === 'vervolg') {
+    const keuze = tekstOf(d.vervolg, '');
+    const tekst = tekstOf(d.tekst, '');
+    metSlot(function () {
+      if (keuze) opvolgingSchrijf(regel, 'Vervolg', vervolgTekst(keuze));
+      if (tekst) opvolgingSchrijf(regel, 'Toelichting', tekst);
+    });
+    return antwoord({ ok: true, iets: !!(keuze || tekst) });
+  }
+
+  if (stap === 'uitkomst') {
+    const keuze = UITKOMSTEN.filter(function (u) { return u.id === p.keuze; })[0];
+    metSlot(function () {
+      opvolgingSchrijf(regel, 'Uitkomst', keuze ? keuze.knop : String(p.keuze));
+      opvolgingSchrijf(regel, 'Uitkomst op', opvolgingNu());
+    });
+    return antwoord({ ok: true, knop: keuze ? keuze.knop : '' });
+  }
+
+  if (stap === 'uitkomsttekst') {
+    const tekst = tekstOf(d.tekst, '');
+    if (tekst) metSlot(function () { opvolgingSchrijf(regel, 'Uitkomst toelichting', tekst); });
+    return antwoord({ ok: true });
+  }
+
+  if (stap === 'stop') {
+    metSlot(function () { opvolgingSchrijf(regel, 'Geen mail meer', opvolgingNu()); });
+    return antwoord({ ok: true });
+  }
+
+  return antwoord({ ok: false, reden: 'stap' });
 }
 
 /* Het cijfer van de student. De klik in de mail legt het cijfer meteen vast;

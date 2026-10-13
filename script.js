@@ -2096,6 +2096,7 @@ document.addEventListener("DOMContentLoaded", () => {
   else if (page === "events") initEvents();
   else if (page === "programmes") initProgrammes();
   else if (page === "alumni") initAlumniloket();
+  else if (page === "feedback") initOpvolging();
 
   // ?check=taal in de adresbalk somt in de console op wat nog geen
   // Nederlands heeft. Voor onszelf, een bezoeker merkt er niets van.
@@ -2609,6 +2610,117 @@ function openLoketForm(alumnus) {
    klapt het menu open en dicht, en sluit weer bij een klik op een link,
    bij Escape, en bij een klik ergens anders op de pagina.
    ═══════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   NA EEN GESPREK (feedback.html)
+
+   De knoppen in de mails na een gesprek komen hier binnen: het cijfer, de
+   vraag een maand later en de afmeldlink. Deze pagina stuurt ze door naar
+   de backend, net als de formulieren hierboven.
+
+   Waarom niet rechtstreeks naar de backend linken? Google stuurt zo'n adres
+   door naar het Google-account waarmee de bezoeker toevallig is ingelogd, en
+   kent dat account ons script niet, dan krijgt hij "Kan het bestand
+   momenteel niet openen" te zien en is zijn antwoord weg.
+   ═══════════════════════════════════════════════════════════════════ */
+function initOpvolging() {
+  const kaart = $("#opvolg");
+  if (!kaart) return;
+  const q = new URLSearchParams(location.search);
+  const token = q.get("t") || "";
+
+  const toon = (titel, tekst, extra) => {
+    kaart.innerHTML = `<h1>${titel}</h1><p>${tekst}</p>${extra || ""}`;
+  };
+  const mislukt = () =>
+    toon(
+      "This link no longer works",
+      `Just reply to our mail instead, we read everything. You can also write to
+       <a href="mailto:${CONTACT_MAIL}">${CONTACT_MAIL}</a>.`,
+    );
+  const bedankt = (tekst) => toon("Thank you", tekst);
+  const stuur = (velden) =>
+    sendFormAntwoord(Object.assign({ formulier: "opvolging", token }, velden), 12000);
+
+  if (!token) return mislukt();
+
+  /* Het tekstvak met de verzendknop eronder. De knop blijft staan tot de
+     backend antwoordt, zodat niemand twee keer stuurt. */
+  const tekstvak = (label, knopTekst) => `<div class="form-stack opvolg-vak">
+        <div><label for="opvolg-tekst">${label}</label>
+        <textarea id="opvolg-tekst" rows="4"></textarea></div>
+        <div><button class="btn-next" id="opvolg-knop" type="button">${knopTekst}</button></div>
+      </div>`;
+  const knopWerkend = (verstuur) => {
+    const knop = $("#opvolg-knop");
+    if (!knop) return;
+    knop.addEventListener("click", () => {
+      knop.disabled = true;
+      knop.textContent = "Sending…";
+      verstuur($("#opvolg-tekst").value).then((d) => {
+        if (d === null) {
+          knop.disabled = false;
+          knop.textContent = "Send";
+          return;
+        }
+        bedankt("We've got it. This is exactly what we use to make the next conversation better.");
+      });
+    });
+  };
+
+  // ── afmelden ──
+  if (q.get("stop")) {
+    stuur({ stap: "stop" }).then((d) => {
+      if (!d || !d.ok) return mislukt();
+      toon("Done", "You won't hear from us about this conversation again.");
+    });
+    return;
+  }
+
+  // ── de maandmail: wat is het geworden? ──
+  if (q.get("outcome")) {
+    stuur({ stap: "uitkomst" }).then((d) => {
+      if (!d || !d.ok) return mislukt();
+      toon(
+        "Thanks for letting us know",
+        "Tell us a bit more if you like: which programme or place, and how is it going?",
+        tekstvak("Anything you want to add?", "Send"),
+      );
+      knopWerkend((tekst) => stuur({ stap: "uitkomsttekst", tekst }));
+    });
+    return;
+  }
+
+  // ── het cijfer ──
+  stuur({ stap: "cijfer" }).then((d) => {
+    if (!d || !d.ok) return mislukt();
+    const keuzes = (d.vervolgen || [])
+      .map(
+        (v) =>
+          `<button class="chip" type="button" data-vervolg="${v.id}">${v.knop}</button>`,
+      )
+      .join("");
+    toon(
+      `Thanks, you gave it a ${d.cijfer} out of ${d.max}`,
+      "One more thing, if you have a minute: are you going to do something with what we discussed?",
+      `<div class="chip-row opvolg-keuzes">${keuzes}</div>` +
+        tekstvak(
+          "What are you planning to do next? And is there anything we should do differently?",
+          "Send",
+        ),
+    );
+    // Aanklikken kiest, nog een keer klikken kiest weer af. Pas op Send gaat
+    // het weg; eerder sloot de pagina meteen en bleef het tekstvak leeg.
+    let gekozen = "";
+    $$("[data-vervolg]").forEach((knop) =>
+      knop.addEventListener("click", () => {
+        gekozen = knop.dataset.vervolg === gekozen ? "" : knop.dataset.vervolg;
+        $$("[data-vervolg]").forEach((k) => k.classList.toggle("on", k.dataset.vervolg === gekozen));
+      }),
+    );
+    knopWerkend((tekst) => stuur({ stap: "vervolg", vervolg: gekozen, tekst }));
+  });
+}
+
 function initMenu() {
   const knop = $("[data-nav-toggle]");
   const kop = $(".site-header");

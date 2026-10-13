@@ -128,6 +128,10 @@ function doPost(e) {
 
     // De pagina's na een gesprek; zie Opvolging.gs. Ook deze verwachten een
     // pagina terug en geen JSON, want er kijkt een mens naar.
+    // De knoppen uit de mails aan de student komen via feedback.html op de
+    // site binnen; die verwachten gegevens terug en geen pagina.
+    if (d.formulier === 'opvolging') return opvolgingWeb(d);
+
     if (d.formulier === 'gesprekteam') return opvolgingTeamOpslaan(d);
     if (d.formulier === 'gesprekcijfer') return opvolgingTekstOpslaan(d);
     if (d.formulier === 'gesprekuitkomst') return opvolgingUitkomstOpslaan(d);
