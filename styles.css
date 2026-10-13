@@ -1603,3 +1603,28 @@ body::before {
   .opvolg { padding: 28px 22px; margin: 16px auto 60px; }
   .opvolg h1 { font-size: 25px; }
 }
+
+/* Ons eigen formulier na een gesprek (invullen.html). Zelfde kaart als
+   hierboven, maar breder: er staan tientallen programma's in. */
+.opvolg.team { max-width: 760px; }
+#team-zoek {
+  width: 100%; box-sizing: border-box; border: 1.5px solid #DDD; border-radius: 10px;
+  padding: 11px 14px; font: inherit; font-size: 14px; outline: none; margin-bottom: 6px;
+}
+#team-zoek:focus { border-color: var(--green); }
+.opvolg.team h2 {
+  font-size: 12.5px; text-transform: uppercase; letter-spacing: .5px; font-weight: 700;
+  color: var(--muted-soft); margin: 20px 0 6px;
+}
+.team-keuze { display: flex; gap: 9px; align-items: flex-start; padding: 5px 0; font-size: 14.5px; }
+.team-keuze input { margin-top: 4px; flex: none; }
+.team-keuze[hidden] { display: none; }
+.team-reden { color: var(--muted-soft); font-size: 12.5px; }
+.team-los { display: block; font-weight: 700; font-size: 13.5px; margin: 20px 0 6px; }
+#team-anders {
+  width: 100%; box-sizing: border-box; border: 1.5px solid #DDD; border-radius: 10px;
+  padding: 11px 14px; font: inherit; font-size: 14px; resize: vertical;
+}
+.team-uitleg { font-size: 13px; color: #4B5044; margin: 0 0 10px; }
+#team-rest summary { cursor: pointer; color: var(--dark); font-size: 14px; margin: 10px 0 4px; }
+#team-opslaan { margin-top: 22px; }

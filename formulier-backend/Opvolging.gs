@@ -223,7 +223,7 @@ function gesprekInAgenda(regel) {
 /* ---- de mail aan ons, een half uur na het gesprek -------------------- */
 
 function stuurTeamMail(regel) {
-  const link = webAdres() + '?gteam='
+  const link = SITE_ADRES + '/invullen.html?t='
     + encodeURIComponent(maakToken('gteam', regel.ref, '', OPVOLGING_LINK_TEAM));
   const wanneer = regel.gesprekOp instanceof Date ? opvolgingDatumTekst(regel.gesprekOp) : 'vandaag';
 
@@ -247,7 +247,7 @@ function stuurTeamMail(regel) {
 }
 
 function stuurHerinnering(regel) {
-  const link = webAdres() + '?gteam='
+  const link = SITE_ADRES + '/invullen.html?t='
     + encodeURIComponent(maakToken('gteam', regel.ref, '', OPVOLGING_LINK_TEAM));
   MailApp.sendEmail({
     to: ONTVANGER,
@@ -632,12 +632,7 @@ function opvolgingTeamPagina(token) {
   const gesorteerd = alumniVoorstellen(regel, 0);
   const vinkje = function (v, metReden) {
     const aan = alGekozen.indexOf(v.a.id) !== -1 ? ' checked' : '';
-    const reden = [
-      v.gedeeld.length ? v.gedeeld.length + ' gedeeld thema' + (v.gedeeld.length === 1 ? '' : "'s")
-        + ' (' + v.gedeeld.join(', ') + ')' : 'geen gedeeld thema',
-      v.a.ruimte.onbeperkt ? 'onbeperkt beschikbaar' : 'nog ' + v.a.ruimte.over + ' plek'
-        + (v.a.ruimte.over === 1 ? '' : 'ken') + ' deze ' + v.a.ruimte.periode,
-    ].join(' · ');
+    const reden = alumniReden(v);
     return '<label class="keuze"><input type="checkbox" name="alumnus" value="'
       + ontsnap(v.a.id) + '"' + aan + '> <strong>' + ontsnap(v.a.naam) + '</strong> — '
       + ontsnap(alumniTeaser(v.a))
@@ -772,6 +767,38 @@ function alumniTeaser(a) {
 }
 
 /* Opslaan van wat wij hebben aangevinkt, en meteen de student mailen. */
+/* Het vastleggen zelf. Zowel onze pagina op de site als de oude pagina op
+   Google komen hier uit, zodat er maar één plek is die in de sheet schrijft
+   en bepaalt of de student zijn mail nu krijgt. */
+function opvolgingTeamVastleggen(regel, gekozen, anders, alumni) {
+  let gemaild = false;
+  let alEerder = false;
+  metSlot(function () {
+    opvolgingSchrijf(regel, 'Aangeraden programma\'s', gekozen.join('; '));
+    opvolgingSchrijf(regel, 'Extra tip', anders);
+    opvolgingSchrijf(regel, 'Voorgestelde alumni', alumni.join('; '));
+    opvolgingSchrijf(regel, 'Vastgelegd op', opvolgingNu());
+    const vers = opvolgingZoek(regel.ref);
+    if (!vers || opvolgingSlaOver(vers)) return;
+    if (vers.nagevraagdOp) { alEerder = true; return; }
+    if (magStudentNuMailen()) {
+      stuurCijferMail(vers);
+      gemaild = true;
+    }
+  });
+  return { gemaild: gemaild, alEerder: alEerder };
+}
+
+/* Waarom iemand wordt voorgesteld, in één regel. */
+function alumniReden(v) {
+  return [
+    v.gedeeld.length ? v.gedeeld.length + ' gedeeld thema' + (v.gedeeld.length === 1 ? '' : "'s")
+      + ' (' + v.gedeeld.join(', ') + ')' : 'geen gedeeld thema',
+    v.a.ruimte.onbeperkt ? 'onbeperkt beschikbaar' : 'nog ' + v.a.ruimte.over + ' plek'
+      + (v.a.ruimte.over === 1 ? '' : 'ken') + ' deze ' + v.a.ruimte.periode,
+  ].join(' · ');
+}
+
 function opvolgingTeamOpslaan(parameter) {
   const p = leesToken(parameter.token, 'gteam');
   if (!p) return loketPagina('Deze link werkt niet meer', 'Vul het in de sheet in.');
@@ -787,29 +814,15 @@ function opvolgingTeamOpslaan(parameter) {
   // dan kwam hij in de mail als los programma in het rijtje te staan.
   const anders = tekstOf(parameter.anders, '');
 
-  let gemaild = false;
-  let alEerder = false;
-  metSlot(function () {
-    opvolgingSchrijf(regel, 'Aangeraden programma\'s', gekozen.join('; '));
-    opvolgingSchrijf(regel, 'Extra tip', anders);
-    opvolgingSchrijf(regel, 'Voorgestelde alumni', alumni.join('; '));
-    opvolgingSchrijf(regel, 'Vastgelegd op', opvolgingNu());
-    const vers = opvolgingZoek(p.ref);
-    if (!vers || opvolgingSlaOver(vers)) return;
-    if (vers.nagevraagdOp) { alEerder = true; return; }
-    if (magStudentNuMailen()) {
-      stuurCijferMail(vers);
-      gemaild = true;
-    }
-  });
+  const uit = opvolgingTeamVastleggen(regel, gekozen, anders, alumni);
 
   const naam = ontsnap(voornaam(regel.naam));
   const wat = gekozen.length
     ? 'Vastgelegd: ' + ontsnap(gekozen.join('; ')) + '. '
     : (anders ? 'Vastgelegd. ' : 'Niets aangeraden, ook goed. ');
-  const hoe = alEerder
+  const hoe = uit.alEerder
     ? naam + ' heeft de mail al gehad, dus die gaat niet nog een keer de deur uit.'
-    : gemaild
+    : uit.gemaild
       ? 'De mail is onderweg naar ' + naam + '.'
       : 'Het is nu buiten mailtijd, dus ' + naam + ' krijgt de mail morgenochtend om 09:00.';
   return loketPagina('Opgeslagen', wat + hoe);
@@ -831,12 +844,48 @@ function opvolgingTeamOpslaan(parameter) {
    ------------------------------------------------------------------- */
 function opvolgingWeb(d) {
   const stap = String(d.stap || '');
-  const soort = (stap === 'uitkomst' || stap === 'uitkomsttekst') ? 'guitkomst'
+  const soort = (stap === 'teamlezen' || stap === 'teamopslaan') ? 'gteam'
+    : (stap === 'uitkomst' || stap === 'uitkomsttekst') ? 'guitkomst'
     : stap === 'stop' ? 'gstop' : 'gcijfer';
   const p = leesToken(d.token, soort);
   if (!p) return antwoord({ ok: false, reden: 'link' });
   const regel = opvolgingZoek(p.ref);
   if (!regel) return antwoord({ ok: false, reden: 'onbekend' });
+
+  // ---- ons eigen formulier: wat heb je aangeraden? ----
+  if (stap === 'teamlezen') {
+    const maak = function (v) {
+      return { id: v.a.id, naam: v.a.naam, teaser: alumniTeaser(v.a), reden: alumniReden(v) };
+    };
+    const gesorteerd = alumniVoorstellen(regel, 0);
+    return antwoord({
+      ok: true,
+      naam: voornaam(regel.naam),
+      groepen: programmaKeuzes().map(function (g) {
+        return { naam: g.naam, items: g.items.map(function (x) { return x.naam; }) };
+      }),
+      gekozen: deelLijst(regel.programmas),
+      extra: regel.extra,
+      voorstellen: gesorteerd.slice(0, 5).map(maak),
+      overige: gesorteerd.slice(5).map(maak),
+      alumniGekozen: deelLijst(regel.alumni),
+    });
+  }
+
+  if (stap === 'teamopslaan') {
+    const lijstje = function (w) { return Array.isArray(w) ? w.map(String) : (w ? [String(w)] : []); };
+    const gekozen = lijstje(d.programma);
+    const anders = tekstOf(d.anders, '');
+    const uit = opvolgingTeamVastleggen(regel, gekozen, anders, lijstje(d.alumnus));
+    return antwoord({
+      ok: true,
+      naam: voornaam(regel.naam),
+      vastgelegd: gekozen.join('; '),
+      tip: !!anders,
+      gemaild: uit.gemaild,
+      alEerder: uit.alEerder,
+    });
+  }
 
   if (stap === 'cijfer') {
     const cijfer = Math.max(1, Math.min(CIJFER_MAX, parseInt(p.keuze, 10) || 0));

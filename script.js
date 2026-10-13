@@ -2097,6 +2097,7 @@ document.addEventListener("DOMContentLoaded", () => {
   else if (page === "programmes") initProgrammes();
   else if (page === "alumni") initAlumniloket();
   else if (page === "feedback") initOpvolging();
+  else if (page === "team") initTeamformulier();
 
   // ?check=taal in de adresbalk somt in de console op wat nog geen
   // Nederlands heeft. Voor onszelf, een bezoeker merkt er niets van.
@@ -2719,6 +2720,135 @@ function initOpvolging() {
     );
     knopWerkend((tekst) => stuur({ stap: "vervolg", vervolg: gekozen, tekst }));
   });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ONS EIGEN FORMULIER NA EEN GESPREK (invullen.html)
+
+   Hier komen wij terecht vanuit de mail "Wat heb je … aangeraden?". De
+   pagina haalt de programma's en de alumni bij de backend op en stuurt
+   terug wat we aanvinken. Zodra je opslaat, krijgt de student zijn mail.
+
+   Alleen te openen met het kenmerk uit die mail; zonder dat staat er
+   niets op. Daarom staan de namen van alumni hier wel en in de mail aan
+   de student niet.
+   ═══════════════════════════════════════════════════════════════════ */
+function initTeamformulier() {
+  const kaart = $("#team");
+  if (!kaart) return;
+  const token = new URLSearchParams(location.search).get("t") || "";
+  const toon = (titel, tekst, extra) => {
+    kaart.innerHTML = `<h1>${titel}</h1><p>${tekst}</p>${extra || ""}`;
+  };
+  const stuur = (velden) =>
+    sendFormAntwoord(Object.assign({ formulier: "opvolging", token }, velden), 15000);
+  const mislukt = () =>
+    toon(
+      "Deze link werkt niet meer",
+      "Vul het bij de hand in de sheet in, in de kolom \"Aangeraden programma's\".",
+    );
+
+  if (!token) return mislukt();
+  stuur({ stap: "teamlezen" }).then((d) => (d && d.ok ? bouw(d) : mislukt()));
+
+  function alumniRegel(a, aan, metReden) {
+    return `<label class="team-keuze"><input type="checkbox" data-alumnus value="${esc(a.id)}"${aan ? " checked" : ""}>
+      <span><strong>${esc(a.naam)}</strong> ${esc(a.teaser)}${
+        metReden ? `<br><span class="team-reden">${esc(a.reden)}</span>` : ""
+      }</span></label>`;
+  }
+
+  function bouw(d) {
+    const gekozen = d.gekozen || [];
+    const alGekozen = d.alumniGekozen || [];
+    const groepen = (d.groepen || [])
+      .map(
+        (g) =>
+          `<h2>${esc(g.naam)}</h2><div class="team-groep">` +
+          g.items
+            .map(
+              (naam) =>
+                `<label class="team-keuze"><input type="checkbox" data-programma value="${esc(naam)}"${
+                  gekozen.indexOf(naam) !== -1 ? " checked" : ""
+                }><span>${esc(naam)}</span></label>`,
+            )
+            .join("") +
+          "</div>",
+      )
+      .join("");
+
+    const voorstellen = (d.voorstellen || [])
+      .map((a) => alumniRegel(a, alGekozen.indexOf(a.id) !== -1, true))
+      .join("");
+    const overige = (d.overige || []).length
+      ? `<details id="team-rest"><summary>Liever iemand anders? Alle ${d.overige.length} andere alumni</summary>
+         <div class="team-groep">${d.overige
+           .map((a) => alumniRegel(a, alGekozen.indexOf(a.id) !== -1, false))
+           .join("")}</div></details>`
+      : "";
+
+    toon(
+      `Wat heb je ${esc(d.naam)} aangeraden?`,
+      `Vink aan wat je hebt genoemd. Zodra je opslaat, krijgt ${esc(d.naam)} de vraag hoe het gesprek was.`,
+      `<input id="team-zoek" placeholder="Zoeken in programma's en alumni…" autocomplete="off" />
+       <div id="team-lijst">${groepen}</div>
+       <label class="team-los" for="team-anders">Iets anders (een stage, een persoon, een tip)</label>
+       <textarea id="team-anders" rows="2">${esc(d.extra || "")}</textarea>
+       ${
+         voorstellen
+           ? `<div id="team-alumni"><h2>Alumni die zouden passen</h2>
+              <p class="team-uitleg">In de mail staat geen naam. De student ziet alleen de studie en de
+              huidige rol, met een knop om een introductie aan te vragen. Die aanvraag komt bij ons langs
+              zoals altijd. Je mag er meerdere aanvinken.</p>${voorstellen}${overige}</div>`
+           : ""
+       }
+       <button class="btn-next" id="team-opslaan" type="button">Opslaan</button>`,
+    );
+
+    // Zoeken doorzoekt de programma's en de alumni tegelijk, en klapt de rest
+    // open zodra daar een treffer in zit.
+    $("#team-zoek").addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase();
+      $$("#team-lijst .team-keuze, #team-alumni .team-keuze").forEach((l) => {
+        l.hidden = l.textContent.toLowerCase().indexOf(q) === -1;
+      });
+      $$("#team-lijst h2").forEach((h) => {
+        h.hidden = !h.nextElementSibling.querySelector(".team-keuze:not([hidden])");
+      });
+      const rest = $("#team-rest");
+      if (rest) rest.open = q.length > 0;
+    });
+
+    const knop = $("#team-opslaan");
+    knop.addEventListener("click", () => {
+      knop.disabled = true;
+      knop.textContent = "Bezig…";
+      const waarden = (kies) => $$(kies).filter((i) => i.checked).map((i) => i.value);
+      stuur({
+        stap: "teamopslaan",
+        programma: waarden("[data-programma]"),
+        alumnus: waarden("[data-alumnus]"),
+        anders: $("#team-anders").value,
+      }).then((a) => {
+        if (!a || !a.ok) {
+          knop.disabled = false;
+          knop.textContent = "Opslaan";
+          return;
+        }
+        const wat = a.vastgelegd
+          ? `Vastgelegd: ${esc(a.vastgelegd)}. `
+          : a.tip
+            ? "Vastgelegd. "
+            : "Niets aangeraden, ook goed. ";
+        const hoe = a.alEerder
+          ? `${esc(a.naam)} heeft de mail al gehad, dus die gaat niet nog een keer de deur uit.`
+          : a.gemaild
+            ? `De mail is onderweg naar ${esc(a.naam)}.`
+            : `Het is nu buiten mailtijd, dus ${esc(a.naam)} krijgt de mail morgenochtend om 09:00.`;
+        toon("Opgeslagen", wat + hoe);
+      });
+    });
+  }
 }
 
 function initMenu() {
