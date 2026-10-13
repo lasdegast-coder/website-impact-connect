@@ -580,16 +580,20 @@ function waarom(k) {
 
 /* ═══ 5. DE MAILS ═══════════════════════════════════════════════════ */
 
-/* Het vaste adres van de implementatie. Google geeft met getUrl() soms het
-   testadres (/dev) terug, en daar kan niemand anders een formulier opslaan.
-   Hetzelfde adres staat als FORM_ENDPOINT in data.js. Nooit vervangen door een
-   nieuwe implementatie: dan praat de site met niets meer. */
+/* Het vaste adres van de implementatie, hetzelfde dat als FORM_ENDPOINT in
+   data.js staat. Nooit vervangen door een nieuwe implementatie: dan praat de
+   site met niets meer.
+
+   Waarom niet ScriptApp.getService().getUrl()? Die geeft het adres met het
+   bedrijfsdeel erin (script.google.com/a/impactconnectutrecht.com/...), en dat
+   opent alleen bij wie op dat moment op het contact@-account staat. Een ander
+   krijgt "geen toegang" of "kan het bestand niet openen". Alle knoppen in onze
+   mails wijzen daarom naar het gewone adres, net als de site zelf. */
 const WEB_ADRES = 'https://script.google.com/macros/s/'
   + 'AKfycbyziDZqzeT_rYUhrINzFJ-dgMprZnJQnk4fWDt8vikc_ao5kBdmB4F_1ybw9roMaVa9/exec';
 
 function webAdres() {
-  const eigen = ScriptApp.getService().getUrl();
-  return eigen && eigen.slice(-5) === '/exec' ? eigen : WEB_ADRES;
+  return WEB_ADRES;
 }
 
 function mailLoketNaarOns(ref, student, gekozen, kandidaten) {
