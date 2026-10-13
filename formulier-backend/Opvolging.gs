@@ -47,7 +47,7 @@ const OPVOLGING_LINK_STUDENT = 120;
 
 /* De vier antwoorden op "wat is het geworden?", in de volgorde van de mail. */
 const UITKOMSTEN = [
-  { id: 'programma', knop: 'I started / signed up a programme and/or approached an Alumni' },
+  { id: 'programma', knop: 'I actually did something after the conversation' },
   { id: 'zoekend',   knop: 'I am still looking' },
   { id: 'niets',     knop: 'I did not do anything after the conversation' },
   { id: 'anders',    knop: 'Something else' },
