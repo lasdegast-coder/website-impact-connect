@@ -2702,7 +2702,7 @@ function initOpvolging() {
       .join("");
     toon(
       `Thanks, you gave it a ${d.cijfer} out of ${d.max}`,
-      "One more thing, if you have a minute: are you going to do something with what we discussed?",
+      "One more thing: are you going to do something with what we discussed?",
       `<div class="chip-row opvolg-keuzes">${keuzes}</div>` +
         tekstvak(
           "What are you planning to do next? And is there anything we should do differently?",

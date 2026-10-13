@@ -229,18 +229,18 @@ function stuurTeamMail(regel) {
 
   MailApp.sendEmail({
     to: ONTVANGER,
-    subject: 'Wat heb je ' + voornaam(regel.naam) + ' aangeraden?',
+    subject: 'What did you recommend to ' + voornaam(regel.naam) + '?',
     name: 'Website ' + AFZENDERNAAM,
     body: [
-      'Het gesprek met ' + tekstOf(regel.naam, 'de student') + ' was ' + wanneer + '.',
+      'Your conversation with ' + tekstOf(regel.naam, 'the student') + ' was ' + wanneer + '.',
       '',
-      'Leg even vast welke programma\'s je hebt aangeraden. Dat duurt een halve',
-      'minuut, en daarna krijgt ' + voornaam(regel.naam) + ' meteen de vraag hoe het',
-      'gesprek was:',
+      'Take half a minute to note down which programmes you recommended. As soon',
+      'as you save it, ' + voornaam(regel.naam) + ' gets the question how the',
+      'conversation went:',
       '',
       link,
       '',
-      'Niets aangeraden? Sla dan leeg op, dan weten we dat ook.',
+      'Nothing to recommend? Save it empty, then we know that too.',
     ].join('\n'),
   });
   opvolgingSchrijf(regel, 'Teammail op', opvolgingNu());
@@ -251,16 +251,16 @@ function stuurHerinnering(regel) {
     + encodeURIComponent(maakToken('gteam', regel.ref, '', OPVOLGING_LINK_TEAM));
   MailApp.sendEmail({
     to: ONTVANGER,
-    subject: 'Nog even: wat heb je ' + voornaam(regel.naam) + ' aangeraden?',
+    subject: 'Reminder: what did you recommend to ' + voornaam(regel.naam) + '?',
     name: 'Website ' + AFZENDERNAAM,
     body: [
-      'Het gesprek met ' + tekstOf(regel.naam, 'de student') + ' is twee dagen geleden',
-      'en de aangeraden programma\'s staan er nog niet bij:',
+      'Your conversation with ' + tekstOf(regel.naam, 'the student') + ' was two days ago',
+      'and the programmes you recommended are not in yet:',
       '',
       link,
       '',
-      'Over twee dagen vragen we ' + voornaam(regel.naam) + ' sowieso hoe het ging,',
-      'maar dan zonder te noemen waar jullie het over hadden.',
+      'In two days we ask ' + voornaam(regel.naam) + ' how it went anyway, but then',
+      'without mentioning what you talked about.',
     ].join('\n'),
   });
   opvolgingSchrijf(regel, 'Herinnerd op', opvolgingNu());
@@ -956,8 +956,7 @@ function opvolgingCijferPagina(token) {
   }).join('');
 
   return loketPagina('Thanks, you gave it a ' + cijfer + ' out of ' + CIJFER_MAX,
-    'One more thing, if you have a minute: are you going to do something with '
-    + 'what we discussed?',
+    'One more thing: are you going to do something with what we discussed?',
     '<form method="post" action="' + webAdres() + '">'
     + '<input type="hidden" name="formulier" value="gesprekcijfer">'
     + '<input type="hidden" name="token" value="' + ontsnap(token) + '">'
