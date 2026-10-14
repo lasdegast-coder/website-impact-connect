@@ -6,7 +6,7 @@
 #
 set -euo pipefail
 
-CLASP="npx --yes @google/clasp@2.4.2"
+CLASP="npx --yes @google/clasp@3.4.1"
 HIER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ ! -f "$HIER/.clasp.json" ]; then
@@ -24,8 +24,10 @@ uitleg_bij_fout() {
     echo "  wacht een minuut, en draai dit script opnieuw." >&2
   elif grep -qi "invalid credentials\|unauthorized\|login" "$1"; then
     echo
-    echo "✗ De inlog is verlopen. Log opnieuw in met:" >&2
-    echo "    npx --yes @google/clasp@2.4.2 login" >&2
+    echo "✗ De inlog klopt niet meer. Log opnieuw in met de eigen sleutel:" >&2
+    echo "    cd formulier-backend" >&2
+    echo "    npx --yes @google/clasp@3.4.1 login --creds creds.json" >&2
+    echo "  Staat creds.json er niet? Zie INSTRUCTIES.md." >&2
   else
     tail -20 "$1" >&2
   fi
@@ -36,16 +38,16 @@ trap 'rm -f "$LOGBOEK"' EXIT
 
 echo "▸ Code naar Google sturen"
 if ! ( cd "$HIER" && $CLASP push --force ) > "$LOGBOEK" 2>&1; then
-  grep -E "^└─|Pushed" "$LOGBOEK" || true
+  grep -E "^└─|Pushed|up to date" "$LOGBOEK" || true
   uitleg_bij_fout "$LOGBOEK"
   exit 1
 fi
-grep -E "^└─|Pushed" "$LOGBOEK" || true
+grep -E "^└─|Pushed|up to date" "$LOGBOEK" || true
 
 if [ -f "$HIER/.clasp-deployment" ]; then
   DEPLOY_ID="$(cat "$HIER/.clasp-deployment")"
   echo "▸ Uitrollen naar de bestaande webapp (adres blijft hetzelfde)"
-  if ! ( cd "$HIER" && $CLASP deploy -i "$DEPLOY_ID" -d "$(date '+%Y-%m-%d %H:%M') via git push" ) > "$LOGBOEK" 2>&1; then
+  if ! ( cd "$HIER" && $CLASP update-deployment "$DEPLOY_ID" -d "$(date '+%Y-%m-%d %H:%M') via git push" ) > "$LOGBOEK" 2>&1; then
     echo "  De code staat wél bij Google, maar het uitrollen mislukte." >&2
     uitleg_bij_fout "$LOGBOEK"
     exit 1

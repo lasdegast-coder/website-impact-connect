@@ -96,19 +96,27 @@ contact@impactconnectutrecht.com.
 - **Pas het script altijd hier aan, nooit in de editor van Google.** De
   volgende push overschrijft wat daar staat.
 - De hook zet een gewijzigd `.gs`-bestand bij een push vanzelf bij Google
-  (met clasp 2.4.2) en stopt de push als dat mislukt, zodat de site nooit
+  (met clasp 3.4.1) en stopt de push als dat mislukt, zodat de site nooit
   live gaat terwijl de oude backend nog draait.
 - **Eenmalig per computer**, door de gebruiker zelf in de terminal, want
   daarbij opent een browser om in te loggen met het contact@-account:
   ```
-  npx --yes @google/clasp@2.4.2 login
-  ./formulier-backend/clasp-opzetten.sh <Script-ID>
+  cd formulier-backend
+  npx --yes @google/clasp@3.4.1 login --creds creds.json
+  cd .. && ./formulier-backend/clasp-opzetten.sh <Script-ID>
   ```
   De Script-ID staat in de Apps Script-editor onder het tandwiel
   (Projectinstellingen). Klaagt clasp over de API: zet die aan op
   https://script.google.com/home/usersettings.
-- `invalid_grant` bij een push betekent dat de inlog is verlopen. Log opnieuw
-  in met de eerste regel hierboven. Let op: gewoon `npx clasp login` werkt niet.
+- **Altijd met `--creds creds.json` inloggen.** Dat is onze eigen sleutel van
+  het contact@-account; die verloopt niet. De sleutel die in clasp zelf zit
+  staat bij Google als "in test", en dan verloopt de inlog na een paar dagen:
+  dat was de `invalid_grant` bij elke push. `creds.json` staat niet in de repo
+  (die is openbaar); hoe je hem opnieuw maakt staat in
+  `formulier-backend/INSTRUCTIES.md`.
+- `invalid_grant` of "inlog klopt niet meer" bij een push: opnieuw inloggen met
+  de regels hierboven. Gewoon `npx clasp login` werkt niet, dan pakt hij de
+  verkeerde sleutel.
 - **Nooit een nieuwe implementatie maken.** Die krijgt een nieuw `/exec`-adres
   en dan praat de site met niets meer. Het script werkt de bestaande bij.
 - **Gesprekken inplannen.** Het afspraakformulier boekt het gekozen tijdslot in

@@ -374,10 +374,11 @@ cd "/Users/joukenabuurs/Documents/Impact connect/impact-connect-static"
 ./formulier-backend/clasp-opzetten.sh
 ```
 
-Het script loopt vier stappen langs en vraagt onderweg om twee dingen:
+Zet eerst `creds.json` klaar (zie hieronder), anders verloopt de inlog elke week
+opnieuw. Daarna loopt het script vier stappen langs en vraagt het om twee dingen:
 
-1. **Inloggen bij Google.** Er opent een browservenster. Kies het account dat het
-   script beheert — hetzelfde account dat de mails verstuurt.
+1. **Inloggen bij Google.** Er opent een browservenster. Kies
+   contact@impactconnectutrecht.com, het account dat het script beheert.
 2. **De Script-ID.** Die vind je in het Apps Script-project onder het tandwiel
    (Projectinstellingen).
 3. Het haalt daarna de projectinstellingen op.
@@ -420,6 +421,36 @@ Moet je toch alleen de site pushen:
 ```bash
 git push --no-verify
 ```
+
+## De sleutel waarmee je inlogt
+
+Clasp heeft een eigen sleutel ingebouwd, maar die staat bij Google als "in test" en
+daardoor verloopt zo'n inlog na een paar dagen. Dan stopt elke push met
+`invalid_grant`. Daarom gebruiken we een eigen sleutel van het contact@-account; die
+verloopt niet.
+
+Staat `formulier-backend/creds.json` niet op jouw computer, maak hem dan zo aan. Log
+eerst in als contact@impactconnectutrecht.com, het liefst in een privévenster.
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → projectkiezer →
+   het project **Impact Connect**. Bestaat dat nog niet: zelf aanmaken.
+2. Zet de [Apps Script API](https://console.cloud.google.com/apis/library/script.googleapis.com)
+   aan.
+3. [Toestemmingsscherm](https://console.cloud.google.com/auth/overview): app-naam
+   *Impact Connect clasp*, doelgroep **Intern**, contact contact@.
+4. [Clients](https://console.cloud.google.com/auth/clients) → *Client maken* → type
+   **Desktop-app** → naam *clasp*. Klik daarna op de naam en kies **JSON downloaden**.
+5. Sla dat bestand op als `formulier-backend/creds.json`.
+
+Daarna één keer inloggen:
+
+```bash
+cd formulier-backend
+npx --yes @google/clasp@3.4.1 login --creds creds.json
+```
+
+`creds.json` en de inlog die eruit volgt staan in `.gitignore`. Zet ze nooit in de
+repo: die is openbaar.
 
 ## Wat er lokaal blijft
 

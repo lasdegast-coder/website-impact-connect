@@ -6,3 +6,8 @@ __pycache__/
 formulier-backend/.clasp.json
 formulier-backend/.clasp-deployment
 formulier-backend/.backup-google-*/
+
+# clasp: de eigen inlogsleutel van contact@ en de inlog die daaruit volgt.
+# Hier staan geheimen in en de repo is openbaar, dus deze gaan nooit mee.
+formulier-backend/.clasprc.json
+formulier-backend/*creds*.json

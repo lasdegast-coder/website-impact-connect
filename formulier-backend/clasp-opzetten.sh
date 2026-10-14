@@ -10,14 +10,21 @@
 #
 set -euo pipefail
 
-CLASP="npx --yes @google/clasp@2.4.2"
+CLASP="npx --yes @google/clasp@3.4.1"
 HIER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HIER/.." && pwd)"
 
 echo "▸ Stap 1 van 4: inloggen bij Google"
 if [ -f "$HOME/.clasprc.json" ]; then
   echo "  Je bent al ingelogd. (Ander account nodig? Voer eerst '$CLASP logout' uit.)"
+elif [ -f "$HIER/creds.json" ]; then
+  # Met onze eigen sleutel verloopt de inlog niet. Zonder die sleutel gebruikt
+  # clasp zijn eigen sleutel en moet je elke week opnieuw inloggen.
+  echo "  Er opent een browservenster. Kies contact@impactconnectutrecht.com."
+  ( cd "$HIER" && $CLASP login --creds creds.json )
 else
+  echo "  Let op: formulier-backend/creds.json ontbreekt, dus de inlog verloopt" >&2
+  echo "  straks weer. Hoe je die sleutel maakt staat in INSTRUCTIES.md." >&2
   echo "  Er opent een browservenster. Kies het account dat het script beheert."
   $CLASP login
 fi
@@ -126,7 +133,7 @@ DEPLOY_ID="$(sed -n 's|.*FORM_ENDPOINT *= *"https://script.google.com/macros/s/\
 if [ -n "$DEPLOY_ID" ]; then
   echo "  Uit FORM_ENDPOINT in data.js: $DEPLOY_ID"
 else
-  ( cd "$HIER" && $CLASP deployments 2>&1 || true ) | sed 's/^/  /'
+  ( cd "$HIER" && $CLASP list-deployments 2>&1 || true ) | sed 's/^/  /'
   echo
   echo "  Hierboven staan de implementaties. De live webapp is meestal die met"
   echo "  een omschrijving, niet die met @HEAD."
