@@ -1628,3 +1628,12 @@ body::before {
 .team-uitleg { font-size: 13px; color: #4B5044; margin: 0 0 10px; }
 #team-rest summary { cursor: pointer; color: var(--dark); font-size: 14px; margin: 10px 0 4px; }
 #team-opslaan { margin-top: 22px; }
+
+/* De eenmalige vragenlijst (rating.html). Gebruikt dezelfde kaart en
+   dezelfde chips als de rest; alleen de labels ertussen zijn nieuw. */
+.rt-los { display: block; font-weight: 700; font-size: 13.5px; margin: 22px 0 6px; }
+.rt-hint { font-size: 13px; color: var(--muted-soft); margin: 0 0 10px; }
+.rt-fout { color: var(--clay); font-size: 13.5px; font-weight: 600; margin: 16px 0 0; }
+.rt-val { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+#rating .chip-row { margin-bottom: 4px; }
+#rating .form-stack { margin-top: 14px; }

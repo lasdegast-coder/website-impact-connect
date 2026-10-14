@@ -1105,6 +1105,92 @@ function meldLaagCijfer(regel, cijfer) {
   } catch (err) { console.error(err); }
 }
 
+/* ---- de eenmalige vragenlijst ----------------------------------------
+   Voor de studenten van het project van vorig jaar. Die staan niet in de
+   sheet, hebben geen gesprek bij ons geboekt en krijgen geen enkele
+   automatische mail: jullie sturen deze link zelf, één keer. De antwoorden
+   komen in een eigen tabblad, zodat het overzicht van de lopende gesprekken
+   schoon blijft.
+
+   Het formulier staat op impactconnectutrecht.com/rating.html en vraagt om
+   een naam, omdat we zonder regel in de sheet anders niet weten wie
+   antwoordde. Het mailadres is optioneel.
+
+   Klaar met deze ronde? Zet VRAGENLIJST_OPEN hieronder op false en push.
+   Daarna zegt de pagina netjes dat het formulier gesloten is en komt er
+   niets meer binnen.
+   ------------------------------------------------------------------- */
+const VRAGENLIJST_OPEN = true;
+const VRAGENLIJST_TABBLAD = 'Eenmalige vragenlijst';
+
+/* Dezelfde kolomnamen als bij de lopende gesprekken, zodat je de cijfers en
+   de uitkomsten van beide groepen naast elkaar kunt leggen. Het script
+   schrijft op kolomnaam; verslepen mag, hernoemen niet. */
+const VRAGENLIJST_KOLOMMEN = ['Ingevuld op', 'Naam', 'E-mail', 'Cijfer', 'Vervolg',
+  'Toelichting', 'Uitkomst', 'Uitkomst toelichting'];
+
+/* Wat de pagina nodig heeft om zichzelf op te bouwen: of het formulier open
+   staat en welke antwoorden erin staan. Zo staan die teksten maar op één
+   plek, hier. */
+function vragenlijstOpzet() {
+  return {
+    ok: true,
+    open: VRAGENLIJST_OPEN,
+    max: CIJFER_MAX,
+    vervolgen: VERVOLGEN,
+    uitkomsten: UITKOMSTEN,
+  };
+}
+
+function vragenlijstBlad() {
+  const bestand = SpreadsheetApp.getActiveSpreadsheet();
+  if (!bestand) return null;
+  let blad = bestand.getSheetByName(VRAGENLIJST_TABBLAD);
+  if (!blad) {
+    blad = bestand.insertSheet(VRAGENLIJST_TABBLAD);
+    blad.appendRow(VRAGENLIJST_KOLOMMEN);
+    blad.setFrozenRows(1);
+    blad.getRange(1, 1, 1, VRAGENLIJST_KOLOMMEN.length).setFontWeight('bold');
+  }
+  return blad;
+}
+
+function vragenlijstOpslaan(d) {
+  if (!VRAGENLIJST_OPEN) return antwoord({ ok: false, reden: 'dicht' });
+
+  const cijfer = parseInt(d.cijfer, 10);
+  if (!(cijfer >= 1 && cijfer <= CIJFER_MAX)) return antwoord({ ok: false, reden: 'cijfer' });
+  const naam = tekstOf(d.naam, '');
+  if (!naam) return antwoord({ ok: false, reden: 'naam' });
+
+  const uitkomst = UITKOMSTEN.filter(function (u) { return u.id === d.uitkomst; })[0];
+  const waarden = {
+    'Ingevuld op': opvolgingNu(),
+    'Naam': naam,
+    'E-mail': eenRegel(tekstOf(d.email, '')),
+    'Cijfer': cijfer,
+    'Vervolg': d.vervolg ? vervolgTekst(String(d.vervolg)) : '',
+    'Toelichting': tekstOf(d.tekst, ''),
+    'Uitkomst': uitkomst ? uitkomst.knop : '',
+    'Uitkomst toelichting': tekstOf(d.uitkomsttekst, ''),
+  };
+
+  let gelukt = false;
+  metSlot(function () {
+    const blad = vragenlijstBlad();
+    if (!blad) return;
+    // Op kolomnaam schrijven, niet op volgorde: dan mag je ze verslepen.
+    const kop = blad.getRange(1, 1, 1, Math.max(blad.getLastColumn(), 1))
+      .getValues()[0].map(function (v) { return String(v).trim(); });
+    blad.appendRow(kop.map(function (naam) {
+      return waarden[naam] === undefined ? '' : waarden[naam];
+    }));
+    gelukt = true;
+  });
+
+  return antwoord(gelukt ? { ok: true } : { ok: false, reden: 'sheet' });
+}
+
 /* ---- aan- en uitzetten ----------------------------------------------
    Draai zetOpvolgingAan() één keer in de editor. Vanaf dat moment krijgen
    alleen gesprekken die dáárna zijn afgelopen een mail, zodat niemand met

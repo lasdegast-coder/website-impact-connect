@@ -2098,6 +2098,7 @@ document.addEventListener("DOMContentLoaded", () => {
   else if (page === "alumni") initAlumniloket();
   else if (page === "feedback") initOpvolging();
   else if (page === "team") initTeamformulier();
+  else if (page === "rating") initVragenlijst();
 
   // ?check=taal in de adresbalk somt in de console op wat nog geen
   // Nederlands heeft. Voor onszelf, een bezoeker merkt er niets van.
@@ -2846,6 +2847,149 @@ function initTeamformulier() {
             ? `De mail is onderweg naar ${esc(a.naam)}.`
             : `Het is nu buiten mailtijd, dus ${esc(a.naam)} krijgt de mail morgenochtend om 09:00.`;
         toon("Opgeslagen", wat + hoe);
+      });
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DE EENMALIGE VRAGENLIJST (rating.html)
+
+   Voor de studenten van het project van vorig jaar. Zij staan niet in de
+   sheet en krijgen geen enkele automatische mail; het team stuurt deze
+   link zelf, één keer. Daarom vraagt deze pagina wel om een naam: zonder
+   regel in de sheet weten we anders niet wie antwoordde.
+
+   De antwoorden en de vraag of het formulier nog open staat komen uit de
+   backend (zie vragenlijstOpslaan in formulier-backend/Opvolging.gs), zodat
+   die teksten maar op één plek staan.
+   ═══════════════════════════════════════════════════════════════════ */
+function initVragenlijst() {
+  const kaart = $("#rating");
+  if (!kaart) return;
+
+  const toon = (titel, tekst, extra) => {
+    kaart.innerHTML = `<h1>${titel}</h1><p>${tekst}</p>${extra || ""}`;
+  };
+  const mislukt = () =>
+    toon(
+      "This form is not available",
+      `Please try again later, or write to
+       <a href="mailto:${CONTACT_MAIL}">${CONTACT_MAIL}</a>.`,
+    );
+
+  if (!FORM_ENDPOINT) return mislukt();
+  fetch(FORM_ENDPOINT + "?lijst=vragenlijst", { cache: "no-store" })
+    .then((r) => r.json())
+    .catch(() => null)
+    .then((d) => {
+      if (!d || !d.ok) return mislukt();
+      if (!d.open) {
+        return toon(
+          "This form is closed",
+          "Thank you for your interest. If you still want to tell us something, " +
+            `write to <a href="mailto:${CONTACT_MAIL}">${CONTACT_MAIL}</a>.`,
+        );
+      }
+      bouw(d);
+    });
+
+  // Rij knoppen waarvan er één aan kan staan. Nog een keer klikken zet hem uit.
+  const rij = (naam, keuzes) =>
+    `<div class="chip-row" data-kies="${naam}">` +
+    keuzes
+      .map((k) => `<button class="chip" type="button" data-waarde="${esc(k.id)}">${esc(k.knop)}</button>`)
+      .join("") +
+    "</div>";
+
+  function bouw(d) {
+    const cijfers = [];
+    for (let c = 1; c <= d.max; c++) cijfers.push({ id: String(c), knop: String(c) });
+
+    toon(
+      "How did it go after our conversation?",
+      "Last year you had a conversation with Impact Connect about what you could do " +
+        "beside your studies. Three questions, about a minute of your time.",
+      `<div class="form-stack">
+         <div><label for="rt-naam">Your name</label>
+         <input id="rt-naam" autocomplete="name" /></div>
+         <div><label for="rt-mail">Your e-mail address (optional)</label>
+         <input id="rt-mail" type="email" autocomplete="email" /></div>
+       </div>
+       <label class="rt-los">How was the conversation?</label>
+       <p class="rt-hint">1 means it did not help much, 5 means it really did.</p>
+       ${rij("cijfer", cijfers)}
+       <label class="rt-los">Did you do something with what we discussed?</label>
+       ${rij("vervolg", d.vervolgen || [])}
+       <div class="form-stack">
+         <div><label for="rt-tekst">What did you do next?</label>
+         <textarea id="rt-tekst" rows="3"></textarea></div>
+       </div>
+       <label class="rt-los">What came of it?</label>
+       ${rij("uitkomst", d.uitkomsten || [])}
+       <div class="form-stack">
+         <div><label for="rt-extra">Anything you want to add?</label>
+         <textarea id="rt-extra" rows="3"></textarea></div>
+       </div>
+       <!-- Spamval: een bot vult alles in, een mens ziet dit veld niet. -->
+       <input id="rt-val" class="rt-val" tabindex="-1" autocomplete="off" aria-hidden="true" />
+       <p class="rt-fout" id="rt-fout" hidden></p>
+       <button class="btn-next" id="rt-knop" type="button">Send</button>`,
+    );
+
+    $$("[data-kies]").forEach((groep) =>
+      groep.addEventListener("click", (e) => {
+        const knop = e.target.closest("[data-waarde]");
+        if (!knop) return;
+        const aan = knop.classList.contains("on");
+        $$("[data-waarde]", groep).forEach((k) => k.classList.remove("on"));
+        knop.classList.toggle("on", !aan);
+      }),
+    );
+
+    const gekozen = (naam) => {
+      const knop = $(`[data-kies="${naam}"] .chip.on`);
+      return knop ? knop.dataset.waarde : "";
+    };
+
+    const knop = $("#rt-knop");
+    knop.addEventListener("click", () => {
+      const naam = $("#rt-naam").value.trim();
+      const cijfer = gekozen("cijfer");
+      const fout = $("#rt-fout");
+      if (!naam || !cijfer) {
+        fout.textContent = "Please fill in your name and pick a score from 1 to 5.";
+        fout.hidden = false;
+        return;
+      }
+      fout.hidden = true;
+      knop.disabled = true;
+      knop.textContent = "Sending…";
+      sendFormAntwoord(
+        {
+          formulier: "vragenlijst",
+          naam,
+          email: $("#rt-mail").value.trim(),
+          cijfer,
+          vervolg: gekozen("vervolg"),
+          tekst: $("#rt-tekst").value,
+          uitkomst: gekozen("uitkomst"),
+          uitkomsttekst: $("#rt-extra").value,
+          website: $("#rt-val").value,
+        },
+        12000,
+      ).then((a) => {
+        if (a === null || (a && a.ok === false)) {
+          knop.disabled = false;
+          knop.textContent = "Send";
+          fout.textContent = "That did not go through. Please try again in a moment.";
+          fout.hidden = false;
+          return;
+        }
+        toon(
+          "Thank you",
+          "That is exactly what we needed. It helps us make the next conversation better.",
+        );
       });
     });
   }

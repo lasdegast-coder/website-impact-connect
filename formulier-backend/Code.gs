@@ -132,6 +132,10 @@ function doPost(e) {
     // site binnen; die verwachten gegevens terug en geen pagina.
     if (d.formulier === 'opvolging') return opvolgingWeb(d);
 
+    // De eenmalige vragenlijst voor de studenten van vorig jaar. Staat los
+    // van de opvolging: geen kenmerk, geen agenda, en nooit een mail terug.
+    if (d.formulier === 'vragenlijst') return vragenlijstOpslaan(d);
+
     if (d.formulier === 'gesprekteam') return opvolgingTeamOpslaan(d);
     if (d.formulier === 'gesprekcijfer') return opvolgingTekstOpslaan(d);
     if (d.formulier === 'gesprekuitkomst') return opvolgingUitkomstOpslaan(d);
@@ -237,6 +241,10 @@ function doGet(e) {
 
   // De vrije tijdsloten voor een gesprek; zie Gesprekken.gs.
   if (p.lijst === 'tijden') return antwoord(gesprekTijden());
+
+  // De eenmalige vragenlijst (rating.html) haalt hier op of hij open staat
+  // en welke antwoorden erin staan; zie Opvolging.gs.
+  if (p.lijst === 'vragenlijst') return antwoord(vragenlijstOpzet());
 
   // De knoppen uit de mails na een gesprek; zie Opvolging.gs.
   if (p.gteam) return opvolgingTeamPagina(p.gteam);
