@@ -546,6 +546,42 @@ function stuurMaandMail(regel) {
   opvolgingSchrijf(regel, 'Maandmail op', opvolgingNu());
 }
 
+/* ---- afspraken zonder kenmerk alsnog koppelen ------------------------
+   Een gesprek dat via de site is geboekt krijgt een kenmerk op de afspraak
+   én op de regel in de sheet. Gesprekken die zijn geboekt voordat de
+   opvolging bestond hebben dat kenmerk niet, en dan wist het script niet
+   over welk gesprek het ging: geen mail. Zo ging het mis bij het gesprek
+   van 13 oktober, dat al in juni geboekt kon zijn.
+
+   We zoeken de regel er alsnog bij op de naam in de titel van de afspraak
+   ("Impact Connect × Naam (Zoya)"). Past er precies één regel zonder
+   kenmerk, dan koppelen we die. Passen er meer, dan doen we niets: liever
+   geen mail dan een mail over de verkeerde student.
+   ------------------------------------------------------------------- */
+function koppelLosseAfspraak(e) {
+  const titel = String(e.getTitle() || '');
+  const passend = opvolgingRegels().filter(function (r) {
+    return !r.ref && r.naam && titel.indexOf(r.naam) !== -1;
+  });
+  if (passend.length !== 1) {
+    console.log('Geen kenmerk bij "' + titel + '" en '
+      + (passend.length ? 'meer dan één regel die past' : 'geen passende regel in de sheet') + '.');
+    return null;
+  }
+
+  const regel = passend[0];
+  const ref = 'GSP-' + Utilities.formatDate(e.getStartTime(), TIJDZONE, 'yyyyMMdd-HHmm')
+    + '-' + Utilities.getUuid().slice(0, 4);
+  e.setTag('ref', ref);
+  opvolgingSchrijf(regel, 'Ref', ref);
+  opvolgingSchrijf(regel, 'Gesprek op', e.getStartTime());
+  const haakje = titel.lastIndexOf('(');
+  const wie = haakje === -1 ? '' : titel.slice(haakje + 1).replace(')', '').trim();
+  if (wie && !regel.door) opvolgingSchrijf(regel, 'Door', wie);
+  console.log('Alsnog gekoppeld: ' + titel + ' → ' + ref);
+  return ref;
+}
+
 /* ---- wat Google elk kwartier doet ------------------------------------
    Kijkt of er een gesprek is afgelopen waar wij nog geen mail over hebben
    gehad. Buiten de spreekuren is er niets te doen en stopt dit meteen.
@@ -565,7 +601,9 @@ function opvolgingKwartier() {
   metSlot(function () {
     afgelopen.forEach(function (e) {
       if (start && e.getEndTime() < start) return;          // van vóór het aanzetten
-      const regel = opvolgingZoek(e.getTag('ref'));
+      // Oudere afspraken hebben nog geen kenmerk; die koppelen we alsnog.
+      const kenmerk = e.getTag('ref') || koppelLosseAfspraak(e);
+      const regel = opvolgingZoek(kenmerk);
       if (!regel || regel.teammailOp) return;
       if (opvolgingSlaOver(regel)) return;
       stuurTeamMail(regel);
@@ -1129,6 +1167,8 @@ function opvolgingWaarom() {
     const reden =
       e.getTag(GESPREK_LABEL) !== 'gesprek'
         ? 'geen kenmerk, dus met de hand in de agenda gezet. Het script laat hem met rust.'
+      : !ref ? 'nog geen kenmerk (geboekt voordat de opvolging bestond); het script'
+        + ' koppelt hem bij de eerstvolgende ronde aan de sheet.'
       : !regel ? 'kenmerk ' + ref + ' staat niet in de sheet; staat de regel er nog?'
       : opvolgingSlaOver(regel) ? 'afgemeld (kolom "Geen mail meer"), dus geen mail.'
       : regel.teammailOp ? 'de mail is al verstuurd op ' + regel.teammailOp + '.'
