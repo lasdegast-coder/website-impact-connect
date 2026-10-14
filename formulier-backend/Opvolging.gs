@@ -1095,6 +1095,51 @@ function opvolgingStartMoment() {
   return v ? new Date(Number(v)) : null;
 }
 
+/* ---- waarom kreeg ik geen mail over dat gesprek? ---------------------
+   Draai deze in de editor als je na een gesprek niets hebt gehad. Hij
+   verstuurt niets en verandert niets; hij loopt de afspraken van de
+   afgelopen week langs en zegt per afspraak wat het script ermee doet.
+   ------------------------------------------------------------------- */
+function opvolgingWaarom() {
+  const start = opvolgingStartMoment();
+  console.log(start
+    ? 'De opvolging staat aan sinds ' + opvolgingDatumTekst(start)
+      + '. Gesprekken die daarvoor afliepen krijgen geen mail.'
+    : 'De opvolging staat UIT. Draai zetOpvolgingAan() om hem aan te zetten.');
+
+  const draait = ScriptApp.getProjectTriggers().map(function (t) {
+    return t.getHandlerFunction();
+  });
+  console.log('Wat Google vanzelf draait: ' + (draait.join(', ') || 'niets'));
+
+  const agenda = gesprekAgenda();
+  if (!agenda) {
+    console.log('De agenda "' + AGENDA_NAAM + '" kan ik niet vinden.');
+    return;
+  }
+
+  const nu = opvolgingNu();
+  const grens = new Date(nu.getTime() - OPVOLGING_NA_MINUTEN * 60000);
+  const afspraken = agenda.getEvents(new Date(nu.getTime() - 7 * 24 * 3600000), nu);
+  console.log(afspraken.length + ' afspraak(en) in die agenda van de afgelopen week:');
+
+  afspraken.forEach(function (e) {
+    const ref = e.getTag('ref');
+    const regel = ref ? opvolgingZoek(ref) : null;
+    const reden =
+      e.getTag(GESPREK_LABEL) !== 'gesprek'
+        ? 'geen kenmerk, dus met de hand in de agenda gezet. Het script laat hem met rust.'
+      : !regel ? 'kenmerk ' + ref + ' staat niet in de sheet; staat de regel er nog?'
+      : opvolgingSlaOver(regel) ? 'afgemeld (kolom "Geen mail meer"), dus geen mail.'
+      : regel.teammailOp ? 'de mail is al verstuurd op ' + regel.teammailOp + '.'
+      : start && e.getEndTime() < start ? 'was al afgelopen voordat de opvolging aanstond.'
+      : e.getEndTime() > grens ? 'nog geen ' + OPVOLGING_NA_MINUTEN + ' minuten klaar; de mail komt nog.'
+      : 'zou een mail moeten krijgen. Draai opvolgingKwartier() en kijk wat er gebeurt.';
+    console.log('  ' + opvolgingDatumTekst(e.getStartTime()) + '  ' + e.getTitle()
+      + '  → ' + reden);
+  });
+}
+
 /* ---- meekijken zonder te versturen ----------------------------------- */
 function opvolgingOverzicht() {
   const start = opvolgingStartMoment();
