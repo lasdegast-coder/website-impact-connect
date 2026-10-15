@@ -96,27 +96,32 @@ contact@impactconnectutrecht.com.
 - **Pas het script altijd hier aan, nooit in de editor van Google.** De
   volgende push overschrijft wat daar staat.
 - De hook zet een gewijzigd `.gs`-bestand bij een push vanzelf bij Google
-  (met clasp 3.4.1) en stopt de push als dat mislukt, zodat de site nooit
-  live gaat terwijl de oude backend nog draait.
+  (met `formulier-backend/uitrollen.js`) en stopt de push als dat mislukt,
+  zodat de site nooit live gaat terwijl de oude backend nog draait.
 - **Eenmalig per computer**, door de gebruiker zelf in de terminal, want
   daarbij opent een browser om in te loggen met het contact@-account:
   ```
   cd formulier-backend
-  npx --yes @google/clasp@3.4.1 login --creds creds.json
+  node uitrollen.js inloggen
   cd .. && ./formulier-backend/clasp-opzetten.sh <Script-ID>
   ```
   De Script-ID staat in de Apps Script-editor onder het tandwiel
-  (Projectinstellingen). Klaagt clasp over de API: zet die aan op
+  (Projectinstellingen). Klaagt Google over de API: zet die aan op
   https://script.google.com/home/usersettings.
-- **Altijd met `--creds creds.json` inloggen.** Dat is onze eigen sleutel van
-  het contact@-account; die verloopt niet. De sleutel die in clasp zelf zit
-  staat bij Google als "in test", en dan verloopt de inlog na een paar dagen:
-  dat was de `invalid_grant` bij elke push. `creds.json` staat niet in de repo
-  (die is openbaar); hoe je hem opnieuw maakt staat in
-  `formulier-backend/INSTRUCTIES.md`.
-- `invalid_grant` of "inlog klopt niet meer" bij een push: opnieuw inloggen met
-  de regels hierboven. Gewoon `npx clasp login` werkt niet, dan pakt hij de
-  verkeerde sleutel.
+- **Het uitrollen gaat niet meer met clasp.** Clasp vraagt bij het inloggen
+  altijd het recht "cloud-platform" mee, en aan dat recht hangt het
+  herauthenticatiebeleid van Google: na een dag stopte elke push met
+  `invalid_grant` (`invalid_rapt`). `uitrollen.js` vraagt alleen de twee
+  rechten die nodig zijn, code bijwerken en uitrollen, en dan blijft de inlog
+  geldig. Het script heeft geen bibliotheken nodig, dus een push downloadt
+  ook niets meer.
+- Twee bestanden blijven daarbij buiten de repo, want daar staan geheimen in:
+  `creds.json` (de eigen sleutel van het contact@-account; hoe je die maakt
+  staat in `formulier-backend/INSTRUCTIES.md`) en `.clasp-auth.json`, de
+  inlog die eruit volgt.
+- `invalid_grant` of "de inlog klopt niet meer" bij een push: opnieuw
+  inloggen met `cd formulier-backend && node uitrollen.js inloggen`.
+
 - **Nooit een nieuwe implementatie maken.** Die krijgt een nieuw `/exec`-adres
   en dan praat de site met niets meer. Het script werkt de bestaande bij.
 - **Gesprekken inplannen.** Het afspraakformulier boekt het gekozen tijdslot in
@@ -127,7 +132,7 @@ contact@impactconnectutrecht.com.
 - **Gebruikt de backend een nieuwe Google-dienst** (agenda, Drive, …), dan moet
   contact@ daar eerst één keer toestemming voor geven. Anders werkt na de push
   géén enkel formulier meer. Volgorde: in `formulier-backend`
-  `npx --yes @google/clasp@2.4.2 push --force` (de live versie verandert dan
+  `node uitrollen.js alleen-code` (de live versie verandert dan
   nog niet), dan in de editor een functie uitvoeren die de dienst gebruikt
   (bij de agenda `agendaTest`) en op Toestaan klikken, en pas daarna `git push`.
 - Zet `&vers=1` achter `FORM_ENDPOINT?lijst=alumni` om de cache van vijf

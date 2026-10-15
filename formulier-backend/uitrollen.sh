@@ -6,7 +6,6 @@
 #
 set -euo pipefail
 
-CLASP="npx --yes @google/clasp@3.4.1"
 HIER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ ! -f "$HIER/.clasp.json" ]; then
@@ -14,19 +13,20 @@ if [ ! -f "$HIER/.clasp.json" ]; then
   exit 1
 fi
 
-# clasp braakt bij een fout een half scherm JSON uit. De twee dingen die in
-# de praktijk misgaan vangen we hier af en leggen we in één zin uit.
+# Het uitrollen doet uitrollen.js, een scriptje zonder bibliotheken. Clasp
+# deed dit eerder, maar dat vraagt bij het inloggen het recht "cloud-platform"
+# mee, en daar hangt Google's herauthenticatiebeleid aan: na een dag stopte
+# elke push met invalid_grant. Zie de uitleg bovenin uitrollen.js.
 uitleg_bij_fout() {
   if grep -q "has not enabled the Apps Script API" "$1"; then
     echo
     echo "✗ De Apps Script API staat uit op dit Google-account." >&2
     echo "  Zet hem aan op https://script.google.com/home/usersettings," >&2
     echo "  wacht een minuut, en draai dit script opnieuw." >&2
-  elif grep -qi "invalid credentials\|unauthorized\|login" "$1"; then
+  elif grep -qi "invalid_grant\|inloggen\|niet vinden" "$1"; then
     echo
-    echo "✗ De inlog klopt niet meer. Log opnieuw in met de eigen sleutel:" >&2
-    echo "    cd formulier-backend" >&2
-    echo "    npx --yes @google/clasp@3.4.1 login --creds creds.json" >&2
+    echo "✗ De inlog klopt niet meer. Log opnieuw in met:" >&2
+    echo "    cd formulier-backend && node uitrollen.js inloggen" >&2
     echo "  Staat creds.json er niet? Zie INSTRUCTIES.md." >&2
   else
     tail -20 "$1" >&2
@@ -36,24 +36,9 @@ uitleg_bij_fout() {
 LOGBOEK="$(mktemp)"
 trap 'rm -f "$LOGBOEK"' EXIT
 
-echo "▸ Code naar Google sturen"
-if ! ( cd "$HIER" && $CLASP push --force ) > "$LOGBOEK" 2>&1; then
-  grep -E "^└─|Pushed|up to date" "$LOGBOEK" || true
+if ! ( cd "$HIER" && node uitrollen.js ) > "$LOGBOEK" 2>&1; then
+  cat "$LOGBOEK" >&2
   uitleg_bij_fout "$LOGBOEK"
   exit 1
 fi
-grep -E "^└─|Pushed|up to date" "$LOGBOEK" || true
-
-if [ -f "$HIER/.clasp-deployment" ]; then
-  DEPLOY_ID="$(cat "$HIER/.clasp-deployment")"
-  echo "▸ Uitrollen naar de bestaande webapp (adres blijft hetzelfde)"
-  if ! ( cd "$HIER" && $CLASP update-deployment "$DEPLOY_ID" -d "$(date '+%Y-%m-%d %H:%M') via git push" ) > "$LOGBOEK" 2>&1; then
-    echo "  De code staat wél bij Google, maar het uitrollen mislukte." >&2
-    uitleg_bij_fout "$LOGBOEK"
-    exit 1
-  fi
-  echo "▸ Klaar. De wijziging is live."
-else
-  echo "▸ Code staat bij Google, maar er is geen implementatie ingesteld."
-  echo "  Rol zelf uit: Implementeren → Implementaties beheren → Nieuwe versie."
-fi
+cat "$LOGBOEK"

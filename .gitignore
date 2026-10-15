@@ -11,3 +11,4 @@ formulier-backend/.backup-google-*/
 # Hier staan geheimen in en de repo is openbaar, dus deze gaan nooit mee.
 formulier-backend/.clasprc.json
 formulier-backend/*creds*.json
+formulier-backend/.clasp-auth.json

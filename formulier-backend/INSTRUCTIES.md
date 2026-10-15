@@ -446,10 +446,17 @@ Daarna één keer inloggen:
 
 ```bash
 cd formulier-backend
-npx --yes @google/clasp@3.4.1 login --creds creds.json
+node uitrollen.js inloggen
 ```
 
-`creds.json` en de inlog die eruit volgt staan in `.gitignore`. Zet ze nooit in de
+Dat vraagt maar twee rechten: code bijwerken en uitrollen. Clasp vroeg daar
+ook "cloud-platform" bij, en aan dat recht hangt Google's
+herauthenticatiebeleid; daardoor verliep de inlog telkens na een dag. Het
+uitrollen zelf doet `uitrollen.js`, een scriptje zonder bibliotheken, dus er
+wordt bij een push ook niets meer gedownload.
+
+`creds.json` en `.clasp-auth.json` (de inlog die eruit volgt) staan in
+`.gitignore`. Zet ze nooit in de
 repo: die is openbaar.
 
 ## Wat er lokaal blijft
