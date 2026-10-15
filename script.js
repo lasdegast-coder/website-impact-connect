@@ -2875,6 +2875,10 @@ function initTeamformulier() {
    De antwoorden en de vraag of het formulier nog open staat komen uit de
    backend (zie vragenlijstOpslaan in formulier-backend/Opvolging.gs), zodat
    die teksten maar op één plek staan.
+
+   Dit formulier vraagt alleen het cijfer en wat ervan gekomen is. De vraag
+   "did you do something with what we discussed" staat hier bewust niet: die
+   hoort bij de automatische mail na een gesprek, en die laten we met rust.
    ═══════════════════════════════════════════════════════════════════ */
 function initVragenlijst() {
   const kaart = $("#rating");
@@ -2921,7 +2925,7 @@ function initVragenlijst() {
     toon(
       "How did it go after our conversation?",
       "Last year you had a conversation with Impact Connect about what you could do " +
-        "beside your studies. Three questions, about a minute of your time.",
+        "beside your studies. Two questions, about a minute of your time.",
       `<div class="form-stack">
          <div><label for="rt-naam">Your name</label>
          <input id="rt-naam" autocomplete="name" /></div>
@@ -2931,12 +2935,6 @@ function initVragenlijst() {
        <label class="rt-los">How was the conversation?</label>
        <p class="rt-hint">1 means it did not help much, 5 means it really did.</p>
        ${rij("cijfer", cijfers)}
-       <label class="rt-los">Did you do something with what we discussed?</label>
-       ${rij("vervolg", d.vervolgen || [])}
-       <div class="form-stack">
-         <div><label for="rt-tekst">What did you do next?</label>
-         <textarea id="rt-tekst" rows="3"></textarea></div>
-       </div>
        <label class="rt-los">What came of it?</label>
        ${rij("uitkomst", d.uitkomsten || [])}
        <div class="form-stack">
@@ -2983,8 +2981,6 @@ function initVragenlijst() {
           naam,
           email: $("#rt-mail").value.trim(),
           cijfer,
-          vervolg: gekozen("vervolg"),
-          tekst: $("#rt-tekst").value,
           uitkomst: gekozen("uitkomst"),
           uitkomsttekst: $("#rt-extra").value,
           website: $("#rt-val").value,
