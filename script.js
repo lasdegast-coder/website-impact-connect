@@ -2640,6 +2640,8 @@ function initOpvolging() {
        <a href="mailto:${CONTACT_MAIL}">${CONTACT_MAIL}</a>.`,
     );
   const bedankt = (tekst) => toon("Thank you", tekst);
+  const traag = () =>
+    toon("One moment", "This is taking longer than usual. Please open this page again in a minute.");
   const stuur = (velden) =>
     sendFormAntwoord(Object.assign({ formulier: "opvolging", token }, velden), 12000);
 
@@ -2650,7 +2652,8 @@ function initOpvolging() {
   const tekstvak = (label, knopTekst) => `<div class="form-stack opvolg-vak">
         <div><label for="opvolg-tekst">${label}</label>
         <textarea id="opvolg-tekst" rows="4"></textarea></div>
-        <div><button class="btn-next" id="opvolg-knop" type="button">${knopTekst}</button></div>
+        <div><p class="rt-fout" id="opvolg-fout" hidden></p>
+        <button class="btn-next" id="opvolg-knop" type="button">${knopTekst}</button></div>
       </div>`;
   const knopWerkend = (verstuur) => {
     const knop = $("#opvolg-knop");
@@ -2659,12 +2662,18 @@ function initOpvolging() {
       knop.disabled = true;
       knop.textContent = "Sending…";
       verstuur($("#opvolg-tekst").value).then((d) => {
-        if (d === null) {
-          knop.disabled = false;
-          knop.textContent = "Send";
-          return;
+        if (d && d.ok) {
+          return bedankt(
+            "We've got it. This is exactly what we use to make the next conversation better.",
+          );
         }
-        bedankt("We've got it. This is exactly what we use to make the next conversation better.");
+        knop.disabled = false;
+        knop.textContent = "Send";
+        const melding = $("#opvolg-fout");
+        melding.textContent = d === undefined
+          ? "We did not get a confirmation. Please press Send once more, sending it twice is no problem."
+          : "That did not go through. Please try again in a moment.";
+        melding.hidden = false;
       });
     });
   };
@@ -2672,6 +2681,7 @@ function initOpvolging() {
   // ── afmelden ──
   if (q.get("stop")) {
     stuur({ stap: "stop" }).then((d) => {
+      if (d === undefined) return traag();
       if (!d || !d.ok) return mislukt();
       toon("Done", "You won't hear from us about this conversation again.");
     });
@@ -2681,6 +2691,7 @@ function initOpvolging() {
   // ── de maandmail: wat is het geworden? ──
   if (q.get("outcome")) {
     stuur({ stap: "uitkomst" }).then((d) => {
+      if (d === undefined) return traag();
       if (!d || !d.ok) return mislukt();
       toon(
         "Thanks for letting us know",
@@ -2694,7 +2705,8 @@ function initOpvolging() {
 
   // ── het cijfer ──
   stuur({ stap: "cijfer" }).then((d) => {
-    if (!d || !d.ok) return mislukt();
+    if (d === undefined) return traag();
+      if (!d || !d.ok) return mislukt();
     const keuzes = (d.vervolgen || [])
       .map(
         (v) =>
@@ -2979,17 +2991,21 @@ function initVragenlijst() {
         },
         12000,
       ).then((a) => {
-        if (a === null || (a && a.ok === false)) {
-          knop.disabled = false;
-          knop.textContent = "Send";
-          fout.textContent = "That did not go through. Please try again in a moment.";
-          fout.hidden = false;
-          return;
+        // Alleen bedanken als de backend het bevestigt. Stond hier eerder
+        // "Thank you" zodra het versturen klaar was, dan denkt iemand bij een
+        // traag antwoord dat het gelukt is terwijl er niets is opgeslagen.
+        if (a && a.ok) {
+          return toon(
+            "Thank you",
+            "That is exactly what we needed. It helps us make the next conversation better.",
+          );
         }
-        toon(
-          "Thank you",
-          "That is exactly what we needed. It helps us make the next conversation better.",
-        );
+        knop.disabled = false;
+        knop.textContent = "Send";
+        fout.textContent = a === undefined
+          ? "We did not get a confirmation. Please press Send once more, sending it twice is no problem."
+          : "That did not go through. Please try again in a moment.";
+        fout.hidden = false;
       });
     });
   }

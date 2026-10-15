@@ -1188,7 +1188,37 @@ function vragenlijstOpslaan(d) {
     gelukt = true;
   });
 
+  if (gelukt) meldVragenlijst(waarden);
   return antwoord(gelukt ? { ok: true } : { ok: false, reden: 'sheet' });
+}
+
+/* Van elk ingevuld formulier een kort bericht naar contact@. Zo kan een
+   antwoord nooit stilletjes verdwijnen, ook niet als er iets misgaat met de
+   sheet of als er per ongeluk een regel wordt weggehaald. Mislukt het mailen
+   zelf, dan is het antwoord nog steeds opgeslagen. */
+function meldVragenlijst(w) {
+  try {
+    MailApp.sendEmail({
+      to: ONTVANGER,
+      subject: 'Vragenlijst ingevuld door ' + w['Naam'],
+      name: 'Website ' + AFZENDERNAAM,
+      replyTo: w['E-mail'] || ONTVANGER,
+      body: [
+        w['Naam'] + (w['E-mail'] ? ' (' + w['E-mail'] + ')' : '') + ' heeft de eenmalige'
+          + ' vragenlijst ingevuld.',
+        '',
+        'Cijfer: ' + w['Cijfer'] + ' van ' + CIJFER_MAX,
+        'Vervolg: ' + (w['Vervolg'] || 'niets aangeklikt'),
+        'Wat daarna: ' + (w['Toelichting'] || '-'),
+        'Uitkomst: ' + (w['Uitkomst'] || 'niets aangeklikt'),
+        'Toelichting: ' + (w['Uitkomst toelichting'] || '-'),
+        '',
+        'Het staat ook in het tabblad "' + VRAGENLIJST_TABBLAD + '" van de sheet.',
+      ].join('\n'),
+    });
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 /* ---- aan- en uitzetten ----------------------------------------------
