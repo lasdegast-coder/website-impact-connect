@@ -92,6 +92,10 @@
           <div class="hero-actions">
             <button class="btn-mag primary" data-open-form><span data-mark="currentColor" data-size="23"></span> <span data-t="nav.appointment">Plan an appointment</span></button>
           </div>
+          <!-- Wat een student ons terugschreef, meteen bij binnenkomst. Komt
+               uit REVIEWS in data.js (het veld `kort`); staat daar niets, dan
+               blijft dit weg. De hele recensie staat verderop op de pagina. -->
+          <figure class="hero-quote" id="hero-quote" hidden></figure>
         </div>
       </div>
     </div>
@@ -269,17 +273,18 @@
     </div>
   </section>
 
-  <!-- ═══ CITAAT ══════════════════════════════════════════════════════
-       Hier stond een donkere sectie met een quote van een student over een
-       thesis-stage. Verzonnen, net als de partnermuur, dus weggehaald; de
-       hele markup is daarna ook geschrapt omdat het bedrijf waar het over
-       ging er niet meer is.
+  <!-- ═══ RECENSIES ═══════════════════════════════════════════════════
+       Wat studenten ons terugschrijven. De inhoud staat in REVIEWS in
+       data.js; initReviews() in script.js vult deze sectie. Staat daar
+       niets, dan blijft de sectie verborgen.
 
-       Wil je hier een echte quote neerzetten, dan is de opmaak er nog:
-       .quote-section, .quote-mark, .quote-by en .quote-avatar in styles.css.
-       Een <section class="quote-section"> met daarin een <blockquote> en een
-       <div class="quote-by"> met naam en studie is genoeg.
+       Hier stond vroeger een verzonnen quote over een thesis-stage. Alleen
+       echte woorden van echte mensen, en alleen met hun toestemming.
   ═════════════════════════════════════════════════════════════════ -->
+  <section class="quote-section" id="reviews" hidden>
+    <span class="quote-mark" aria-hidden="true">&ldquo;</span>
+    <div class="quote-inner" id="reviews-inner"></div>
+  </section>
 
   <!-- ═══ SLOT-CTA ═══════════════════════════════════════════════════ -->
   <section class="final-cta">

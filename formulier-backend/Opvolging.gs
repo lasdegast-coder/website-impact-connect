@@ -938,11 +938,13 @@ function opvolgingWeb(d) {
   if (stap === 'vervolg') {
     const keuze = tekstOf(d.vervolg, '');
     const tekst = tekstOf(d.tekst, '');
+    let recensie = false;
     metSlot(function () {
       if (keuze) opvolgingSchrijf(regel, 'Vervolg', vervolgTekst(keuze));
       if (tekst) opvolgingSchrijf(regel, 'Toelichting', tekst);
+      recensie = recensieBewaren(d, regel.ref, regel.naam);
     });
-    return antwoord({ ok: true, iets: !!(keuze || tekst) });
+    return antwoord({ ok: true, iets: !!(keuze || tekst), recensie: recensie });
   }
 
   if (stap === 'uitkomst') {
@@ -1105,6 +1107,146 @@ function meldLaagCijfer(regel, cijfer) {
   } catch (err) { console.error(err); }
 }
 
+/* ---- recensies -------------------------------------------------------
+   Wat studenten over ons schrijven, voor op de homepage. Ze laten het achter
+   op dezelfde pagina waar ze een cijfer geven, en in de eenmalige
+   vragenlijst. Elke recensie komt in het tabblad "Recensies" van deze sheet.
+
+   Twee dingen staan daarbij vast:
+
+   - De site leest dit tabblad niet zelf. Dat kan ook niet: er staat de
+     volledige naam in van iemand die anoniem wil blijven. De site vraagt de
+     lijst op bij dit script (?lijst=recensies), en dan gaat alleen mee wat
+     naar buiten mag.
+   - Een recensie verschijnt pas als iemand van het team in de kolom
+     "Op de site" yes zet. Tot die tijd staat hij alleen in de sheet.
+   ------------------------------------------------------------------- */
+const RECENSIE_TABBLAD = 'Recensies';
+const RECENSIE_KOLOMMEN = ['Ingevuld op', 'Ref', 'Naam', 'Recensie', 'Hoe tonen',
+  'Jaar', 'Op de site', 'Uitgelicht'];
+
+/* Hoe de student eronder komt te staan. De sleutel is wat de pagina
+   meestuurt; de tekst is wat een bezoeker leest. */
+const RECENSIE_JAREN = {
+  '1': '1st year student',
+  '2': '2nd year student',
+  '3': '3rd year student',
+  'master': 'Master\'s student',
+  'phd': 'PhD student',
+  'anders': 'Student',
+};
+
+function recensieBlad() {
+  const bestand = SpreadsheetApp.getActiveSpreadsheet();
+  if (!bestand) return null;
+  let blad = bestand.getSheetByName(RECENSIE_TABBLAD);
+  if (!blad) {
+    blad = bestand.insertSheet(RECENSIE_TABBLAD);
+    blad.appendRow(RECENSIE_KOLOMMEN);
+    blad.setFrozenRows(1);
+    blad.getRange(1, 1, 1, RECENSIE_KOLOMMEN.length).setFontWeight('bold');
+  }
+  return blad;
+}
+
+/* Bewaart wat iemand schreef. Geen tekst, geen regel. Geeft terug of er iets
+   is opgeslagen, zodat de pagina kan bedanken voor de recensie. */
+function recensieBewaren(d, ref, naam) {
+  const tekst = tekstOf(d.recensie, '');
+  if (!tekst) return false;
+
+  const hoe = String(d.recensiehoe || 'anoniem');
+  const waarden = {
+    'Ingevuld op': opvolgingNu(),
+    'Ref': ref || '',
+    'Naam': naam || '',
+    'Recensie': tekst,
+    'Hoe tonen': hoe === 'naam' ? 'naam en jaar' : hoe === 'jaar' ? 'alleen jaar' : 'anoniem',
+    'Jaar': RECENSIE_JAREN[String(d.recensiejaar || '')] || '',
+    'Op de site': '',
+    'Uitgelicht': '',
+  };
+
+  const blad = recensieBlad();
+  if (!blad) return false;
+  const kop = blad.getRange(1, 1, 1, Math.max(blad.getLastColumn(), 1))
+    .getValues()[0].map(function (v) { return String(v).trim(); });
+  blad.appendRow(kop.map(function (k) { return waarden[k] === undefined ? '' : waarden[k]; }));
+
+  try {
+    MailApp.sendEmail({
+      to: ONTVANGER,
+      subject: 'Recensie van ' + (naam || 'een student'),
+      name: 'Website ' + AFZENDERNAAM,
+      body: [
+        (naam || 'Een student') + ' heeft een recensie achtergelaten:',
+        '',
+        tekst,
+        '',
+        'Zo wil die genoemd worden: ' + waarden['Hoe tonen']
+          + (waarden['Jaar'] ? ' (' + waarden['Jaar'] + ')' : ''),
+        '',
+        'Hij staat nog niet op de site. Zet in het tabblad "' + RECENSIE_TABBLAD
+          + '" de kolom "Op de site" op yes, dan staat hij er binnen vijf minuten op.',
+      ].join('\n'),
+    });
+  } catch (err) {
+    console.error(err);
+  }
+  return true;
+}
+
+/* Wat de site mag zien. Alleen goedgekeurde regels, en de naam alleen als de
+   student daarvoor koos. */
+function recensiesOpenbaar() {
+  const blad = recensieBlad();
+  if (!blad || blad.getLastRow() < 2) return [];
+  const alles = blad.getDataRange().getValues();
+  const kop = alles[0].map(function (v) { return String(v).trim(); });
+  const kolom = function (naam) { return kop.indexOf(naam); };
+  const k = {
+    tekst: kolom('Recensie'), hoe: kolom('Hoe tonen'), jaar: kolom('Jaar'),
+    naam: kolom('Naam'), site: kolom('Op de site'), uit: kolom('Uitgelicht'),
+  };
+  if (k.tekst === -1 || k.site === -1) return [];
+
+  const uit = [];
+  for (let i = 1; i < alles.length; i++) {
+    const rij = alles[i];
+    const akkoord = String(rij[k.site] || '').trim().toLowerCase();
+    if (akkoord !== 'yes' && akkoord !== 'ja' && akkoord !== 'true') continue;
+    const tekst = String(rij[k.tekst] || '').trim();
+    if (!tekst) continue;
+    const hoe = String(k.hoe === -1 ? '' : rij[k.hoe] || '').trim().toLowerCase();
+    const jaar = String(k.jaar === -1 ? '' : rij[k.jaar] || '').trim();
+    uit.push({
+      tekst: tekst,
+      uitgelicht: String(k.uit === -1 ? '' : rij[k.uit] || '').trim(),
+      naam: hoe.indexOf('naam') === 0 ? String(rij[k.naam] || '').trim() : '',
+      rol: jaar || 'Student',
+    });
+  }
+  return uit;
+}
+
+function recensiesJson(vers) {
+  const cache = CacheService.getScriptCache();
+  if (!vers) {
+    const bewaard = cache.get('recensies');
+    if (bewaard) return bewaard;
+  }
+  const json = JSON.stringify({ ok: true, recensies: recensiesOpenbaar() });
+  cache.put('recensies', json, 300);
+  return json;
+}
+
+/* Net als bij de alumni: hiermee staat een wijziging in de sheet meteen op
+   de site, zonder die vijf minuten af te wachten. */
+function wisRecensieCache() {
+  CacheService.getScriptCache().remove('recensies');
+  console.log('Cache geleegd. De site haalt de recensies nu opnieuw op.');
+}
+
 /* ---- de eenmalige vragenlijst ----------------------------------------
    Voor de studenten van het project van vorig jaar. Die staan niet in de
    sheet, hebben geen gesprek bij ons geboekt en krijgen geen enkele
@@ -1188,8 +1330,12 @@ function vragenlijstOpslaan(d) {
     gelukt = true;
   });
 
-  if (gelukt) meldVragenlijst(waarden);
-  return antwoord(gelukt ? { ok: true } : { ok: false, reden: 'sheet' });
+  let recensie = false;
+  if (gelukt) {
+    meldVragenlijst(waarden);
+    metSlot(function () { recensie = recensieBewaren(d, '', naam); });
+  }
+  return antwoord(gelukt ? { ok: true, recensie: recensie } : { ok: false, reden: 'sheet' });
 }
 
 /* Van elk ingevuld formulier een kort bericht naar contact@. Zo kan een

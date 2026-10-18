@@ -246,6 +246,13 @@ function doGet(e) {
   // en welke antwoorden erin staan; zie Opvolging.gs.
   if (p.lijst === 'vragenlijst') return antwoord(vragenlijstOpzet());
 
+  // De recensies voor op de homepage. Alleen wat goedgekeurd is, en de naam
+  // alleen als de student daarvoor koos; zie recensiesOpenbaar in Opvolging.gs.
+  if (p.lijst === 'recensies') {
+    return ContentService.createTextOutput(recensiesJson(p.vers === '1'))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   // De knoppen uit de mails na een gesprek; zie Opvolging.gs.
   if (p.gteam) return opvolgingTeamPagina(p.gteam);
   if (p.gcijfer) return opvolgingCijferPagina(p.gcijfer);

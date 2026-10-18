@@ -77,6 +77,11 @@ Alle drie staan bewust uit. Zet ze alleen om als de gebruiker dat vraagt.
 
 ## Privacy: hier geen uitzonderingen
 
+- **Een recensie verschijnt alleen na jullie goedkeuring.** De student kiest
+  zelf of er een naam bij staat, alleen het studiejaar, of niets. Kiest hij
+  anoniem, dan stuurt de backend zijn naam niet mee naar de site; dat regelt
+  `recensiesOpenbaar()` in `Opvolging.gs`. De sheet met de recensies blijft
+  privé, want daar staat de naam wél in.
 - **Geen namen van alumni op de site.** Alleen hun rol, werkgever, eerdere rol
   en opleiding. Namen gaan pas over en weer in de introductiemail, en alleen
   nadat wij een aanvraag hebben goedgekeurd.
@@ -156,6 +161,8 @@ alleen met het team en publiceer ze nooit.
 | Alumni introducties | Het alumniloket: per aanvraag de vraag, de drie kandidaten, wie we kozen, en drie weken later het cijfer en de toelichting van de student. |
 | Alumni die we nog missen | Het formulier onder de lijst, voor als er niemand past. Dit is de wervingslijst. |
 | Berichten | Het contactformulier. Verschijnt bij het eerste bericht. |
+| Recensies | Wat studenten over ons schrijven, uit beide formulieren. Een regel komt pas op de site als jullie in de kolom "Op de site" **yes** zetten. |
+| Eenmalige vragenlijst | Het losse formulier op rating.html, voor de studenten van vorig jaar. Die regels krijgen nooit een automatische mail. |
 
 Tabbladen hernoemen en kolommen verslepen mag. **Kolomkoppen hernoemen niet**:
 het script schrijft op kolomnaam, dus een hernoemde kop krijgt een nieuwe
@@ -176,6 +183,8 @@ functies uit het bestand dat open staat.
 - `zetNavraagTriggerAan` en `zetNavraagTriggerUit`: de dagelijkse navraag drie
   weken na een introductie. Staat aan.
 - `wisAlumniCache`: de lijst op de site meteen verversen.
+- `wisRecensieCache` (in `Opvolging.gs`): hetzelfde voor de recensies, als je
+  niet die vijf minuten wilt wachten nadat je "Op de site" op yes hebt gezet.
 
 ## Testen zonder echte alumni
 

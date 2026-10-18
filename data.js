@@ -272,6 +272,35 @@ const EVENTS = [
   {"name": "Dutch Sustainable Fashion Week (DSFW)", "date": "07-10-2026 to 11-10-2026", "time": "times vary by venue", "loc": "Multiple cities (NL); opening Haarlem", "cost": "Mostly free", "link": "https://www.dsfw.nl", "cat": "business", "desc": "A week of events across Dutch cities exploring sustainable and circular fashion, much of it free to attend.", "descNl": "Een week met activiteiten in verschillende Nederlandse steden over duurzame en circulaire mode."}
 ];
 
+/* ═══════════════════════════════════════════════════════════════════
+   RECENSIES
+
+   Wat studenten ons terugschrijven, op de homepage tussen de events en de
+   slotoproep. Bij één recensie staat er een groot citaat; vanaf twee komen
+   ze naast elkaar te staan. Is de lijst leeg, dan valt de hele sectie weg.
+
+   Drie afspraken:
+   - Zet alleen iets neer waarvan de persoon heeft gezegd dat het op de
+     site mag. Vraag dat met zoveel woorden, net als bij de alumni.
+   - Schrijf de woorden over zoals ze er staan. Niet mooier maken.
+   - Wil iemand niet met naam genoemd worden, laat `naam` dan leeg. Dan
+     staat er alleen de rol, bijvoorbeeld "MSc student, Geosciences".
+
+   `uitgelicht` is optioneel: dat stukje uit de tekst krijgt de accentkleur.
+   Het moet letterlijk in de tekst voorkomen, anders gebeurt er niets.
+   ═══════════════════════════════════════════════════════════════════ */
+const REVIEWS = [
+  {
+    tekst: "Impact Connect has a large network of connections in many different sectors regarding sustainability. They were able to help me with my request to find impactful volunteer work. Beyond sharing their vast network, they listen carefully to what you want and are willing to put in the work to help you achieve your goal. Can't recommend them enough!",
+    uitgelicht: "Can't recommend them enough!",
+    // Wat er bovenin de homepage komt te staan. Eén zin, letterlijk uit de
+    // tekst hierboven geknipt. Laat je dit leeg, dan staat er in de hero niets.
+    kort: "They listen carefully to what you want and are willing to put in the work to help you achieve your goal.",
+    naam: "",
+    rol: "Student, found volunteer work through us",
+  },
+];
+
 const WALL_CATS = [
   { id: "all", label: "Everyone" },
   { id: "energy", label: "Energy & Climate" },

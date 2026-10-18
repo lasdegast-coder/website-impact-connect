@@ -1192,7 +1192,116 @@ function initWall() {
 /* ═══════════════════════════════════════════════════════════════════
    HOME: logoband, categorieën, eerstvolgende events
    ═══════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   RECENSIES OP DE HOMEPAGE
+
+   De teksten staan in REVIEWS in data.js. Eén recensie wordt een groot
+   citaat; vanaf twee komen ze naast elkaar in kolommen, want één zin in
+   reuzenletters naast een andere leest niet. Is de lijst leeg, dan blijft
+   de hele sectie verborgen en ziet een bezoeker er niets van.
+   ═══════════════════════════════════════════════════════════════════ */
+function initReviews() {
+  const sectie = $("#reviews");
+  const vak = $("#reviews-inner");
+  if (!sectie || !vak) return;
+  const terugval = (typeof REVIEWS === "undefined" ? [] : REVIEWS).filter((r) => r && r.tekst);
+  haalRecensies().then((uitSheet) => toonReviews(uitSheet && uitSheet.length ? uitSheet : terugval));
+
+  function toonReviews(lijst) {
+  if (!lijst.length) return;
+
+  // Het uitgelichte stukje krijgt de accentkleur. Alles gaat eerst door esc(),
+  // dus de tekst zelf kan nooit opmaak meebrengen.
+  const metAccent = (r) => {
+    const tekst = esc(r.tekst);
+    const deel = r.uitgelicht ? esc(r.uitgelicht) : "";
+    return deel && tekst.includes(deel)
+      ? tekst.replace(deel, `<em>${deel}</em>`)
+      : tekst;
+  };
+  const onder = (r) =>
+    `<div class="quote-by">
+       <div>
+         ${r.naam ? `<div class="name">${esc(r.naam)}</div>` : ""}
+         ${r.rol ? `<div class="role">${esc(r.rol)}</div>` : ""}
+       </div>
+     </div>`;
+
+  if (lijst.length === 1) {
+    const r = lijst[0];
+    // Een lange recensie in de grootste letter wordt een muur tekst; vanaf
+    // ongeveer 180 tekens dus een maatje kleiner.
+    const klasse = r.tekst.length > 180 ? " lang" : "";
+    vak.innerHTML =
+      `<blockquote class="reveal${klasse}">${metAccent(r)}</blockquote>
+       <div class="reveal" data-delay="120">${onder(r)}</div>`;
+  } else {
+    vak.innerHTML =
+      `<div class="quote-grid">` +
+      lijst
+        .slice(0, 3)
+        .map(
+          (r, i) =>
+            `<div class="quote-kaart reveal" data-delay="${i * 110}">
+               <blockquote>${metAccent(r)}</blockquote>
+               ${onder(r)}
+             </div>`,
+        )
+        .join("") +
+      `</div>`;
+  }
+
+  sectie.hidden = false;
+  initReveal(sectie);
+  heroCitaat(lijst[0]);
+  }
+}
+
+/* De goedgekeurde recensies uit de sheet, via ons eigen script. Lukt dat
+   niet, dan valt de homepage terug op REVIEWS in data.js, zodat er nooit
+   een lege plek ontstaat. */
+function haalRecensies() {
+  if (!FORM_ENDPOINT) return Promise.resolve(null);
+  const verzoek = fetch(FORM_ENDPOINT + "?lijst=recensies", { cache: "no-store" })
+    .then((res) => res.json())
+    .then((d) => (d && d.ok && Array.isArray(d.recensies) ? d.recensies : null))
+    .catch(() => null);
+  return Promise.race([verzoek, new Promise((res) => setTimeout(() => res(null), 6000))]);
+}
+
+/* Dezelfde recensie, maar dan ingekort en helemaal bovenaan: wie de site
+   opent ziet meteen wat een ander eraan had. De volledige tekst staat
+   verderop op de pagina, dus hier staat alleen de zin uit `kort`. */
+/* Wat er bovenin komt te staan: het veld `kort` als dat er is, anders de
+   uitgelichte zin, anders de eerste zin van de recensie. Is die eerste zin
+   een hele alinea, dan slaan we de hero over; daar past geen lap tekst. */
+function korteZinUit(r) {
+  if (r.kort) return String(r.kort).trim();
+  if (r.uitgelicht) return String(r.uitgelicht).trim();
+  const tekst = String(r.tekst || "").trim();
+  let eind = -1;
+  [". ", "! ", "? "].forEach((teken) => {
+    const plek = tekst.indexOf(teken);
+    if (plek !== -1 && (eind === -1 || plek < eind)) eind = plek;
+  });
+  const zin = eind === -1 ? tekst : tekst.slice(0, eind + 1);
+  return zin.length > 160 ? "" : zin;
+}
+
+function heroCitaat(r) {
+  const vak = $("#hero-quote");
+  if (!vak || !r) return;
+  const zin = korteZinUit(r);
+  if (!zin) return;
+  vak.innerHTML =
+    `<span class="q" aria-hidden="true">&ldquo;</span>
+     <blockquote>${esc(zin)}</blockquote>
+     <figcaption>${r.naam ? `<b>${esc(r.naam)}</b>, ` : ""}${esc(r.rol || "")}</figcaption>`;
+  vak.hidden = false;
+}
+
 async function initHome() {
+  initReviews();
   const band = $("#logo-band-track");
 
   // De logoband toont de programma's die er echt zijn, niet een rij
@@ -2613,6 +2722,85 @@ function openLoketForm(alumnus) {
    bij Escape, en bij een klik ergens anders op de pagina.
    ═══════════════════════════════════════════════════════════════════ */
 /* ═══════════════════════════════════════════════════════════════════
+   DE RECENSIEVRAAG
+
+   Staat op twee plekken: op de pagina na een cijfer (feedback.html) en in
+   de eenmalige vragenlijst (rating.html). Daarom hier één keer, en niet
+   twee keer bijna hetzelfde.
+
+   De student kiest zelf hoe hij eronder komt te staan. Kiest hij anoniem,
+   dan stuurt de backend zijn naam niet mee naar de site; zie
+   recensiesOpenbaar() in formulier-backend/Opvolging.gs. En wat hij schrijft
+   verschijnt pas nadat iemand van het team het in de sheet goedkeurt.
+   ═══════════════════════════════════════════════════════════════════ */
+const REC_HOE = [
+  { id: "naam", knop: "My name and year of study" },
+  { id: "jaar", knop: "Only my year of study" },
+  { id: "anoniem", knop: "Anonymous" },
+];
+const REC_JAREN = [
+  { id: "1", knop: "1st year" },
+  { id: "2", knop: "2nd year" },
+  { id: "3", knop: "3rd year" },
+  { id: "master", knop: "Master's" },
+  { id: "phd", knop: "PhD" },
+  { id: "anders", knop: "Other" },
+];
+
+function recensieBlok() {
+  const rij = (soort, keuzes) =>
+    `<div class="chip-row" data-rec="${soort}">` +
+    keuzes
+      .map((k) => `<button class="chip" type="button" data-waarde="${esc(k.id)}">${esc(k.knop)}</button>`)
+      .join("") +
+    `</div>`;
+  return `<label class="rt-los" for="rec-tekst">Would you share a few words with other students?</label>
+     <p class="rt-hint">If you write something here, we may show it on our website.
+       You choose how your name is shown.</p>
+     <textarea id="rec-tekst" rows="3"></textarea>
+     <label class="rt-los">How should we show it?</label>
+     ${rij("hoe", REC_HOE)}
+     <div id="rec-jaarvak" hidden>
+       <label class="rt-los">Which year are you in?</label>
+       ${rij("jaar", REC_JAREN)}
+     </div>`;
+}
+
+/* Aanklikken kiest, nog een keer klikken kiest af. Het jaar vragen we alleen
+   als de student met naam of met jaar genoemd wil worden. */
+function recensieKoppel() {
+  $$("[data-rec]").forEach((groep) =>
+    groep.addEventListener("click", (e) => {
+      const knop = e.target.closest("[data-waarde]");
+      if (!knop) return;
+      const aan = knop.classList.contains("on");
+      $$("[data-waarde]", groep).forEach((k) => k.classList.remove("on"));
+      knop.classList.toggle("on", !aan);
+      const jaarvak = $("#rec-jaarvak");
+      if (jaarvak && groep.dataset.rec === "hoe") {
+        const keuze = $('[data-rec="hoe"] .chip.on');
+        jaarvak.hidden = !keuze || keuze.dataset.waarde === "anoniem";
+      }
+    }),
+  );
+}
+
+/* Leeg tekstvak betekent: geen recensie. Dan sturen we ook niets mee. */
+function recensieVelden() {
+  const vak = $("#rec-tekst");
+  if (!vak || !vak.value.trim()) return {};
+  const kies = (soort) => {
+    const knop = $(`[data-rec="${soort}"] .chip.on`);
+    return knop ? knop.dataset.waarde : "";
+  };
+  return {
+    recensie: vak.value,
+    recensiehoe: kies("hoe") || "anoniem",
+    recensiejaar: kies("jaar"),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    NA EEN GESPREK (feedback.html)
 
    De knoppen in de mails na een gesprek komen hier binnen: het cijfer, de
@@ -2649,9 +2837,10 @@ function initOpvolging() {
 
   /* Het tekstvak met de verzendknop eronder. De knop blijft staan tot de
      backend antwoordt, zodat niemand twee keer stuurt. */
-  const tekstvak = (label, knopTekst) => `<div class="form-stack opvolg-vak">
+  const tekstvak = (label, knopTekst, extra) => `<div class="form-stack opvolg-vak">
         <div><label for="opvolg-tekst">${label}</label>
         <textarea id="opvolg-tekst" rows="4"></textarea></div>
+        ${extra ? `<div>${extra}</div>` : ""}
         <div><p class="rt-fout" id="opvolg-fout" hidden></p>
         <button class="btn-next" id="opvolg-knop" type="button">${knopTekst}</button></div>
       </div>`;
@@ -2663,9 +2852,9 @@ function initOpvolging() {
       knop.textContent = "Sending…";
       verstuur($("#opvolg-tekst").value).then((d) => {
         if (d && d.ok) {
-          return bedankt(
-            "We've got it. This is exactly what we use to make the next conversation better.",
-          );
+          return bedankt(d.recensie
+            ? "We've got it, and thank you for the kind words. We'll have a quick look and then put them on our website."
+            : "We've got it. This is exactly what we use to make the next conversation better.");
         }
         knop.disabled = false;
         knop.textContent = "Send";
@@ -2720,6 +2909,7 @@ function initOpvolging() {
         tekstvak(
           "What are you planning to do next? And is there anything we should do differently?",
           "Send",
+          recensieBlok(),
         ),
     );
     // Aanklikken kiest, nog een keer klikken kiest weer af. Pas op Send gaat
@@ -2731,7 +2921,9 @@ function initOpvolging() {
         $$("[data-vervolg]").forEach((k) => k.classList.toggle("on", k.dataset.vervolg === gekozen));
       }),
     );
-    knopWerkend((tekst) => stuur({ stap: "vervolg", vervolg: gekozen, tekst }));
+    recensieKoppel();
+    knopWerkend((tekst) =>
+      stuur(Object.assign({ stap: "vervolg", vervolg: gekozen, tekst }, recensieVelden())));
   });
 }
 
@@ -2941,12 +3133,14 @@ function initVragenlijst() {
          <div><label for="rt-extra">Anything you want to add?</label>
          <textarea id="rt-extra" rows="3"></textarea></div>
        </div>
+       ${recensieBlok()}
        <!-- Spamval: een bot vult alles in, een mens ziet dit veld niet. -->
        <input id="rt-val" class="rt-val" tabindex="-1" autocomplete="off" aria-hidden="true" />
        <p class="rt-fout" id="rt-fout" hidden></p>
        <button class="btn-next" id="rt-knop" type="button">Send</button>`,
     );
 
+    recensieKoppel();
     $$("[data-kies]").forEach((groep) =>
       groep.addEventListener("click", (e) => {
         const knop = e.target.closest("[data-waarde]");
@@ -2976,7 +3170,7 @@ function initVragenlijst() {
       knop.disabled = true;
       knop.textContent = "Sending…";
       sendFormAntwoord(
-        {
+        Object.assign({
           formulier: "vragenlijst",
           naam,
           email: $("#rt-mail").value.trim(),
@@ -2984,7 +3178,7 @@ function initVragenlijst() {
           uitkomst: gekozen("uitkomst"),
           uitkomsttekst: $("#rt-extra").value,
           website: $("#rt-val").value,
-        },
+        }, recensieVelden()),
         12000,
       ).then((a) => {
         // Alleen bedanken als de backend het bevestigt. Stond hier eerder
@@ -2993,7 +3187,9 @@ function initVragenlijst() {
         if (a && a.ok) {
           return toon(
             "Thank you",
-            "That is exactly what we needed. It helps us make the next conversation better.",
+            a.recensie
+              ? "That is exactly what we needed, and thank you for the kind words. We'll have a quick look and then put them on our website."
+              : "That is exactly what we needed. It helps us make the next conversation better.",
           );
         }
         knop.disabled = false;
