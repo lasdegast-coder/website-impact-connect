@@ -8,7 +8,7 @@
      2. zodra dat is opgeslagen krijgt de student een mail met het cijfer
         1 tot 5, en daarna de vraag of hij er iets mee gaat doen;
      3. is er na twee dagen niets vastgelegd, dan krijgen wij een
-        herinnering. Na vier dagen gaat de mail naar de student sowieso,
+        herinnering. Na zeven dagen gaat de mail naar de student sowieso,
         zonder de zin over de programma's, anders raken we zijn cijfer kwijt;
      4. dertig dagen na het gesprek vragen we de student wat het geworden is.
 
@@ -33,7 +33,7 @@ const WHATSAPP_LINK = 'https://chat.whatsapp.com/IFJQL3ews8J624ZF2EY42T';
 
 const OPVOLGING_NA_MINUTEN   = 30;   // zo lang na afloop krijgen wij de mail
 const OPVOLGING_HERINNERING  = 2;    // dagen zonder invullen tot de herinnering
-const OPVOLGING_UITERLIJK    = 4;    // dagen tot de student hoe dan ook mailt
+const OPVOLGING_UITERLIJK    = 7;    // dagen tot de student hoe dan ook mailt
 const OPVOLGING_MAAND        = 30;   // dagen tot "wat is het geworden?"
 const OPVOLGING_STIL_VANAF   = 20;   // 's avonds geen studentmail meer
 const OPVOLGING_STIL_TOT     = 9;    // 's ochtends weer wel
@@ -259,7 +259,7 @@ function stuurHerinnering(regel) {
       '',
       link,
       '',
-      'In two days we ask ' + voornaam(regel.naam) + ' how it went anyway, but then',
+      'In five days we ask ' + voornaam(regel.naam) + ' how it went anyway, but then',
       'without mentioning what you talked about.',
     ].join('\n'),
   });
@@ -627,7 +627,7 @@ function opvolgingDagelijks() {
         stuurHerinnering(regel);
         return;
       }
-      // 2. de student: zodra wij hebben ingevuld, of uiterlijk na vier dagen
+      // 2. de student: zodra wij hebben ingevuld, of uiterlijk na zeven dagen
       if (!regel.nagevraagdOp && (regel.vastgelegdOp || dagen >= OPVOLGING_UITERLIJK)) {
         stuurCijferMail(regel);
         return;
