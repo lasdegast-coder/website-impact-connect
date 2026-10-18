@@ -1205,7 +1205,10 @@ function initReviews() {
   const vak = $("#reviews-inner");
   if (!sectie || !vak) return;
   const terugval = (typeof REVIEWS === "undefined" ? [] : REVIEWS).filter((r) => r && r.tekst);
-  haalRecensies().then((uitSheet) => toonReviews(uitSheet && uitSheet.length ? uitSheet : terugval));
+  // null betekent: ophalen mislukt, dan tonen we wat in data.js staat. Een
+  // lege lijst betekent: er is niets goedgekeurd, en dan hoort er ook niets
+  // te staan.
+  haalRecensies().then((uitSheet) => toonReviews(uitSheet === null ? terugval : uitSheet));
 
   function toonReviews(lijst) {
   if (!lijst.length) return;
