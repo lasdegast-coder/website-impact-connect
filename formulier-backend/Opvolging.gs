@@ -1123,7 +1123,7 @@ function meldLaagCijfer(regel, cijfer) {
    ------------------------------------------------------------------- */
 const RECENSIE_TABBLAD = 'Recensies';
 const RECENSIE_KOLOMMEN = ['Ingevuld op', 'Ref', 'Naam', 'Recensie', 'Hoe tonen',
-  'Jaar', 'Op de site', 'Uitgelicht'];
+  'Jaar', 'Op de site', 'Uitgelicht', 'Kort'];
 
 /* Hoe de student eronder komt te staan. De sleutel is wat de pagina
    meestuurt; de tekst is wat een bezoeker leest. */
@@ -1165,6 +1165,7 @@ function recensieBewaren(d, ref, naam) {
     'Jaar': RECENSIE_JAREN[String(d.recensiejaar || '')] || '',
     'Op de site': '',
     'Uitgelicht': '',
+    'Kort': '',
   };
 
   const blad = recensieBlad();
@@ -1207,6 +1208,7 @@ function recensiesOpenbaar() {
   const k = {
     tekst: kolom('Recensie'), hoe: kolom('Hoe tonen'), jaar: kolom('Jaar'),
     naam: kolom('Naam'), site: kolom('Op de site'), uit: kolom('Uitgelicht'),
+    kort: kolom('Kort'),
   };
   if (k.tekst === -1 || k.site === -1) return [];
 
@@ -1222,6 +1224,9 @@ function recensiesOpenbaar() {
     uit.push({
       tekst: tekst,
       uitgelicht: String(k.uit === -1 ? '' : rij[k.uit] || '').trim(),
+      // Welke zin bovenin de homepage komt. Leeg laten mag: dan pakt de site
+      // de uitgelichte zin, en anders de eerste zin van de recensie.
+      kort: String(k.kort === -1 ? '' : rij[k.kort] || '').trim(),
       naam: hoe.indexOf('naam') === 0 ? String(rij[k.naam] || '').trim() : '',
       rol: jaar || 'Student',
     });
