@@ -42,7 +42,7 @@ bouwen.
 
 In Google Drive, in de map **Taken + uitleg systemen**, staat het document
 **Hoe de systemen van Impact Connect werken**:
-https://docs.google.com/document/d/1daASGiLJS1tZytHtIQzCzqItjw36tMWuVOJ6tVJLHOw/edit
+https://docs.google.com/document/d/1Rf450Xt_vtzXPofZG_K3_pB3pmSuTyZSgajh4iu0UGg/edit
 
 Daarin staat per dienst (gesprekken, evenementen, alumni) stap voor stap wat
 er gebeurt: wat de student doet, wat vanzelf gaat, en wat het team zelf moet
@@ -58,6 +58,13 @@ niet in.
 
 Kun je in jouw sessie niet bij Google Drive, zeg dat dan tegen de gebruiker en
 geef de tekst die erin moet, zodat die het zelf kan plakken.
+
+Bijwerken gaat het makkelijkst met de Google Docs-connector, rechtstreeks in
+het bestaande document. Is die niet verbonden, dan kun je met de
+Drive-connector een nieuwe versie maken van de hele tekst, het oude bestand
+naar de prullenbak doen en de link hierboven bijwerken. De tekst van de
+laatste versie staat ook in `docs/uitleg-systemen.md`, zodat je nooit vanaf
+nul hoeft te beginnen.
 
 ## Waar wat staat
 
