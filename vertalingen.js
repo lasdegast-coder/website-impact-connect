@@ -402,8 +402,8 @@ const VERTALINGEN = {
   "afspr.privacy":     { en: "We'll use this only to plan your appointment and suggest relevant programmes. You can ask us to delete your details anytime.",
                           nl: "We gebruiken dit alleen om je afspraak te plannen en passende programma's voor te stellen. Je kunt ons altijd vragen je gegevens te verwijderen." },
   "afspr.verstuur":    { en: "Book appointment", nl: "Afspraak vastleggen" },
-  "afspr.gelukt":      { en: "We've got your request, and a copy is on its way to your own inbox. The Impact Connect team will reach out (usually within a few days) to plan the half hour and go through the programmes and places that fit where you want to go.",
-                          nl: "We hebben je aanvraag binnen, en er is een kopie onderweg naar je eigen inbox. Het team van Impact Connect neemt contact op (meestal binnen een paar dagen) om dat half uur te plannen en de programma's en plekken langs te gaan die passen bij waar jij heen wilt." },
+  "afspr.gelukt":      { en: "We've got your request, and a copy is on its way to your own inbox. We'll mail you to find a moment that does work, and then we go through the programmes and places that fit where you want to go.",
+                          nl: "We hebben je aanvraag binnen, en er is een kopie onderweg naar je eigen inbox. We mailen je om een moment te vinden dat wel past, en daarna gaan we de programma's en plekken langs die passen bij waar jij heen wilt." },
 
   /* ── het alumniformulier ───────────────────────────────────────── */
   "al.stap1":          { en: "Who are you looking for?", nl: "Wie zoek je?" },

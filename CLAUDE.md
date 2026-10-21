@@ -38,6 +38,27 @@ bouwen.
 - **De repo is openbaar.** Nooit mailadressen of telefoonnummers van mensen,
   wachtwoorden, tokens of gegevens uit de antwoordsheets committen.
 
+## Houd de uitleg in Drive bij
+
+In Google Drive, in de map **Taken + uitleg systemen**, staat het document
+**Hoe de systemen van Impact Connect werken**:
+https://docs.google.com/document/d/1daASGiLJS1tZytHtIQzCzqItjw36tMWuVOJ6tVJLHOw/edit
+
+Daarin staat per dienst (gesprekken, evenementen, alumni) stap voor stap wat
+er gebeurt: wat de student doet, wat vanzelf gaat, en wat het team zelf moet
+doen. Het is bedoeld om in één keer door te lezen, ook door iemand die de
+code nooit ziet.
+
+**Verander je iets aan de werking, werk dat document dan in dezelfde beurt
+bij** en zet de datum bovenaan goed. Dat geldt voor alles wat een student of
+het team merkt: het rooster en de tijden, welke mails er gaan en wanneer, de
+velden in de formulieren, de kolommen in de sheets, en wat automatisch gaat of
+juist met de hand moet. Alleen iets onder de motorkap verplaatsen hoeft er
+niet in.
+
+Kun je in jouw sessie niet bij Google Drive, zeg dat dan tegen de gebruiker en
+geef de tekst die erin moet, zodat die het zelf kan plakken.
+
 ## Waar wat staat
 
 Geen build-stap, geen dependencies. De volledige bestandslijst staat in
