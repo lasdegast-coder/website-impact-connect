@@ -42,7 +42,7 @@ bouwen.
 
 In Google Drive, in de map **Taken + uitleg systemen**, staat het document
 **Hoe de systemen van Impact Connect werken**:
-https://docs.google.com/document/d/1Rf450Xt_vtzXPofZG_K3_pB3pmSuTyZSgajh4iu0UGg/edit
+https://docs.google.com/document/d/1cVM4hOACF6pKwiTTdmAzyO_O_7y9yNMSivYf5FeEX1Y/edit
 
 Daarin staat per dienst (gesprekken, evenementen, alumni) stap voor stap wat
 er gebeurt: wat de student doet, wat vanzelf gaat, en wat het team zelf moet

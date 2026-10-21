@@ -93,6 +93,42 @@ Een student boekt zelf een gesprek, wij spreken hem, en daarna loopt de hele naz
 
 ---
 
-## Dienst 3 — alumni benaderen
+## Dienst 3 — een alumnus benaderen
 
-*Volgt.*
+### Wat de student doet
+
+1. Opent **Ask an alumni**. Daar staan twee routes: weet hij al wie hij zoekt, dan de lijst; weet hij dat niet, dan eerst een gesprek met ons.
+2. Bekijkt de lijst. Hij ziet **geen namen**: alleen opleiding (bachelor en master), huidige rol, eerdere rol, de thema's, en of die persoon deze periode nog ruimte heeft. Wie vol zit staat er wel bij, maar is niet aan te vragen.
+3. Kiest iemand en vult het formulier in: zijn vraag (hij moet er echt iets over schrijven), zijn vakgebied, wat voor organisatie hij zoekt, eventueel een specifieke rol of plek, wat hij eruit wil halen, plus naam, mailadres en studie.
+4. Past er niemand, dan vult hij het formulier **"Nobody on the list fits your question?"** in. Dat komt in het tabblad *Alumni die we nog missen*, onze wervingslijst.
+5. Per student mogen er **twee aanvragen tegelijk** openstaan. Daarna moet hij er eerst een afwachten.
+
+### Wat er automatisch gebeurt
+
+6. Het script zoekt **drie kandidaten**: de gevraagde alumnus plus twee die qua thema's aansluiten en nog ruimte hebben.
+7. contact@ krijgt één mail met die drie, met per persoon waarom hij past en hoeveel ruimte hij nog heeft, en een knop per persoon. Er is ook een knop voor "niemand". Die knoppen werken **zeven dagen**.
+8. De aanvraag komt in het tabblad **Alumni introducties** te staan, met status "wacht".
+9. De student krijgt meteen een bevestiging dat we ernaar kijken.
+
+### Wat wij zelf doen: één klik
+
+10. Klik in die mail op de persoon die je kiest. Meer niet.
+
+### Wat daarna weer vanzelf gaat
+
+11. De **alumnus** krijgt de vraag van de student per mail, met de student in de cc. Zo hebben ze elkaars adres en kan het gesprek beginnen. De toon van die mail volgt zijn eigen voorkeur: schrijven, bellen of videobellen.
+12. De **student** krijgt bericht dat hij is voorgesteld, aan wie, en wat er van hem wordt verwacht: snel reageren, de vraag concreet houden, en ons laten weten hoe het ging. Kozen wij iemand anders dan hij vroeg, dan staat erbij waarom, met de vraag of hij liever wacht op zijn eerste keuze.
+13. Kies je **"niemand"**, dan krijgt de student een nette afwijzing met twee alternatieven uit de lijst, zodat zijn zoektocht niet stopt.
+14. De teller van die alumnus loopt meteen op. Zit hij daarmee vol voor deze periode, dan verdwijnt hij vanzelf uit de aanvraagbare lijst.
+15. **Drie weken later** krijgt de student één mail met de vraag hoe nuttig het was: één klik voor een cijfer, en daarna ruimte voor een toelichting. Dat belandt bij dezelfde regel in *Alumni introducties*.
+
+### Hoe iemand op de lijst komt
+
+16. Een alumnus vult zelf het aanmeldformulier in. Dat komt in de sheet **LINKED TO WEBSITE alumni database**. Het script leest daaruit en schrijft er nooit in.
+17. Hij staat pas op de site als de **toestemmingskolom "yes"** zegt, en hij bepaalt zelf hoe vaak hij benaderd mag worden en op welke manier.
+18. De site ververst de lijst elke vijf minuten. Wil je een nieuwe aanmelding meteen zien, draai dan wisAlumniCache in de Apps Script-editor.
+19. In de lijst staat één testprofiel. Studenten zien dat niet; het verschijnt alleen op alumni.html?test=1. Gebruik dat profiel als je de keten wilt uitproberen, nooit een echte alumnus.
+
+### Waar het in de code staat
+
+- Alles van het loket zit in formulier-backend/Loket.gs: de lijst die de site krijgt, het kiezen van de drie kandidaten, de mails, de knoppen en de navraag na drie weken.
