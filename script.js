@@ -982,6 +982,106 @@ function derivePaid(cost) {
   return null;
 }
 
+/* ── programma's van dezelfde organisatie bij elkaar ────────────────
+   GoodShift had vijf programma's en dus vijf kaarten met vijf keer
+   hetzelfde logo naast elkaar. Nu wordt dat één kaart met de rollen
+   eronder; klik je hem open, dan staan ze alle vijf in het venster.
+
+   Hoe de site ziet dat ze bij elkaar horen: het stuk vóór het streepje
+   of de dubbele punt in de naam ("GoodShift – Charity Support" hoort bij
+   "GoodShift"), en daarnaast moet de website dezelfde zijn. Dat tweede is
+   nodig omdat in de summerschools veel namen met "Summer School:"
+   beginnen terwijl dat heel verschillende organisaties zijn.
+
+   Vergeet iemand het streepje, dan telt de regel alsnog mee zolang de
+   naam met diezelfde organisatie begint en de website klopt. */
+const GROEP_SPLITSERS = [" – ", " — ", " - ", ": ", " | "];
+
+function organisatieUit(naam) {
+  for (const teken of GROEP_SPLITSERS) {
+    const plek = naam.indexOf(teken);
+    if (plek > 2) return naam.slice(0, plek).trim();
+  }
+  return null;
+}
+
+function rolUit(naam, organisatie) {
+  for (const teken of GROEP_SPLITSERS) {
+    const plek = naam.indexOf(teken);
+    if (plek > 2) return naam.slice(plek + teken.length).trim();
+  }
+  const kaal = naam.slice(organisatie.length).trim();
+  return kaal || naam;
+}
+
+function programmaDomein(p) {
+  const adres = String(p.url || "").match(/https?:\/\/[^\s"'<>]+/);
+  if (!adres) return "";
+  try {
+    return hoofddomein(new URL(adres[0]).hostname).toLowerCase();
+  } catch (err) {
+    return "";
+  }
+}
+
+/* Geeft de lijst terug zoals hij getekend moet worden: losse programma's
+   blijven zoals ze zijn, en waar er meerdere van dezelfde organisatie in
+   dezelfde categorie staan komt er één groep voor in de plaats. */
+function groepeerProgrammas(lijst) {
+  const sleutel = (organisatie, p) => organisatie.toLowerCase() + "@" + programmaDomein(p);
+
+  // 1. welke organisaties komen we tegen, bij namen mét een streepje?
+  const gevonden = new Map();                       // sleutel -> organisatie zoals geschreven
+  lijst.forEach((p) => {
+    const organisatie = organisatieUit(p.name);
+    if (organisatie) gevonden.set(sleutel(organisatie, p), organisatie);
+  });
+
+  // 2. elk programma bij zijn organisatie zetten, ook als het streepje mist
+  const bij = new Map();                            // sleutel -> [programma's]
+  const sleutelVan = (p) => {
+    const eigen = organisatieUit(p.name);
+    if (eigen) return sleutel(eigen, p);
+    for (const [s, organisatie] of gevonden) {
+      if (s === sleutel(organisatie, p)
+        && p.name.toLowerCase().indexOf(organisatie.toLowerCase() + " ") === 0) return s;
+    }
+    return null;
+  };
+  lijst.forEach((p) => {
+    const s = sleutelVan(p);
+    if (!s) return;
+    if (!bij.has(s)) bij.set(s, []);
+    bij.get(s).push(p);
+  });
+
+  // 3. de lijst opnieuw opbouwen, in dezelfde volgorde
+  const gehad = new Set();
+  const uit = [];
+  lijst.forEach((p) => {
+    const s = sleutelVan(p);
+    const leden = s ? bij.get(s) : null;
+    if (!leden || leden.length < 2) {
+      uit.push({ soort: "een", p });
+      return;
+    }
+    if (gehad.has(s)) return;                       // deze groep staat er al
+    gehad.add(s);
+    const organisatie = gevonden.get(s) || organisatieUit(p.name) || p.name;
+    const talen = [...new Set(leden.map((l) => l.lang).filter(Boolean))];
+    uit.push({
+      soort: "groep",
+      sleutel: s,
+      naam: organisatie,
+      leden,
+      partner: leden.some((l) => l.partner),
+      logoVan: leden.find((l) => programmeLogo(l)) || leden[0],
+      lang: talen.length === 1 ? talen[0] : null,
+    });
+  });
+  return uit;
+}
+
 /* Een partner is een organisatie waarmee we echt samenwerken: wij kunnen een
    student daar rechtstreeks voorstellen. Dat zet je aan in de kolom "Partner"
    van de programmasheet; "yes", "ja", "x" of "true" tellen allemaal mee. Het
@@ -1078,7 +1178,9 @@ async function initProgrammes() {
 
   function render() {
     const list = partnersBovenaan(programmes.filter((p) => p.cat === cat));
-    grid.innerHTML = list.map((p, i) => {
+    grid.innerHTML = groepeerProgrammas(list).map((item, i) => {
+      if (item.soort === "groep") return groepKaart(item, i);
+      const p = item.p;
       // Of iets betaald is zegt de categorie al; onder de naam staat de taal.
       const hint = p.lang || null;
       const mono = (p.name || "?").replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase();
@@ -1108,6 +1210,12 @@ async function initProgrammes() {
   grid.addEventListener("click", (e) => {
     const card = e.target.closest(".tease-card");
     if (!card) return;
+    if (card.dataset.groep) {
+      const groep = groepeerProgrammas(partnersBovenaan(programmes.filter((x) => x.cat === cat)))
+        .find((x) => x.soort === "groep" && x.sleutel === card.dataset.groep);
+      if (groep) openGroepPopup(groep);
+      return;
+    }
     const p = programmes.find((x) => x.name === card.dataset.name);
     if (p) openProgrammePopup(p);
   });
@@ -1123,6 +1231,84 @@ async function initProgrammes() {
     paintCats();
     render();
   }
+}
+
+/* De kaart van een organisatie met meerdere programma's. Eén logo, de naam
+   van de organisatie, hoeveel rollen er zijn en de eerste paar eronder. */
+function kortGenoeg(tekst, lengte = 34) {
+  const s = String(tekst || "").trim();
+  if (s.length <= lengte) return s;
+  const kort = s.slice(0, lengte);
+  const spatie = kort.lastIndexOf(" ");
+  return (spatie > 14 ? kort.slice(0, spatie) : kort).replace(/[,;:.&]$/, "") + "…";
+}
+
+function groepKaart(groep, i) {
+  const logo = programmeLogo(groep.logoVan);
+  const mono = (groep.naam || "?").replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase();
+  const rollen = groep.leden.slice(0, 3)
+    .map((lid) => `<span>${esc(kortGenoeg(rolUit(lid.name, groep.naam)))}</span>`);
+  if (groep.leden.length > 3) {
+    rollen.push(`<span>${esc(t("prog.groep.meer").replace("{n}", groep.leden.length - 3))}</span>`);
+  }
+  // De rollen staan in een paneel dat onder de kaart hangt en pas openklapt
+  // als je er met de muis overheen gaat. Daardoor is deze kaart even groot
+  // als alle andere en verspringt het raster niet.
+  return `<div class="tease-card groep reveal" data-delay="${Math.min(i, 8) * 50}" data-groep="${esc(groep.sleutel)}">
+    ${groep.partner ? `<span class="partner-tag">${t("prog.partner")}</span>` : ""}
+    <div class="mono-wrap">${logo
+      ? `<div class="prog-logo${logoOnDark(groep.logoVan) ? " on-dark" : ""}"><img src="${esc(logo)}" alt="" loading="lazy"></div>`
+      : `<div class="mono">${esc(mono)}</div>`}</div>
+    <div class="tc-body">
+      <div class="tc-name">${esc(groep.naam)}</div>
+      <div class="tc-aantal">${esc(t("prog.groep.aantal").replace("{n}", groep.leden.length))}</div>
+      ${groep.lang ? `<div class="tc-hint">${esc(groep.lang)}</div>` : ""}
+    </div>
+    <div class="tc-foot">${t("prog.kaart.voet")} ${icon("ArrowUpRight", 14)}</div>
+    <div class="tc-rollen">${rollen.join("")}</div>
+  </div>`;
+}
+
+/* Het venster van zo'n groep: de rollen onder elkaar. Klik je er een aan,
+   dan opent gewoon het venster van dat ene programma, met dezelfde knoppen
+   als altijd. */
+function openGroepPopup(groep) {
+  const wrap = document.createElement("div");
+  wrap.id = "prog-pop-root";
+  const uitleg = groep.partner
+    ? t("prog.pop.groep.partner").replace("{naam}", groep.naam)
+    : t("prog.pop.groep").replace("{naam}", groep.naam).replace("{n}", groep.leden.length);
+  wrap.innerHTML = `
+    <div class="prog-pop-overlay" data-close></div>
+    <div class="prog-pop" role="dialog" aria-label="${esc(groep.naam)}">
+      <div class="head">
+        <div class="ghost">${icon("Rocket", 120, { strokeWidth: 1.1 })}</div>
+        <button class="icon-btn" data-close aria-label="${t("sluiten")}">${icon("X", 16, { color: "#fff" })}</button>
+        <div class="kicker">${t("prog.pop.kicker")}</div>
+        <div class="name">${esc(groep.naam)}</div>
+      </div>
+      <div class="body">
+        ${groep.partner ? `<p class="partner-regel">${bridgeMark(18, "currentColor")} ${esc(uitleg)}</p>`
+          : `<p>${esc(uitleg)}</p>`}
+        <div class="groep-rollen">
+          ${groep.leden.map((lid, n) => `<button class="groep-rol" type="button" data-rol="${n}">
+            <span><b>${esc(rolUit(lid.name, groep.naam))}</b>
+            ${lid.lang || lid.duration
+              ? `<small>${esc(kortGenoeg([lid.lang, lid.duration].filter(Boolean).join(" · "), 52))}</small>` : ""}</span>
+            <span class="gaan">${t("prog.groep.rol")} ${icon("ArrowRight", 14)}</span>
+          </button>`).join("")}
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  $$("[data-close]", wrap).forEach((el) => el.addEventListener("click", () => wrap.remove()));
+  $$("[data-rol]", wrap).forEach((knop) => knop.addEventListener("click", () => {
+    const lid = groep.leden[Number(knop.dataset.rol)];
+    wrap.remove();
+    if (lid) openProgrammePopup(lid);
+  }));
+  const esckey = (e) => { if (e.key === "Escape") { wrap.remove(); window.removeEventListener("keydown", esckey); } };
+  window.addEventListener("keydown", esckey);
 }
 
 function openProgrammePopup(p) {

@@ -1680,3 +1680,46 @@ body::before {
 
 /* De spamregel hoort bij het mailveld erboven, dus hij sluit er strak op aan. */
 .form-stack .form-note.let-op { margin-top: 9px; }
+
+/* Kaart van een organisatie met meerdere programma's, en het venster
+   daarachter. Zie groepeerProgrammas() in script.js. */
+.tease-card .tc-aantal {
+  font-size: 12.5px; font-weight: 700; color: var(--green); margin-top: 3px;
+}
+/* De kaart zelf blijft even groot als de andere. De rollen hangen in een
+   paneel eronder dat openklapt zodra je er met de muis overheen gaat; het
+   schuift over de kaarten eronder heen, zodat het raster niet verspringt. */
+.tease-card.groep { overflow: visible; }
+/* De oranje balk schuift normaal van onder de kaart tevoorschijn en wordt de
+   rest van de tijd door de kaartrand afgesneden. Bij deze kaart mag niets
+   afgesneden worden (anders zie je het uitklappaneel niet), dus verbergen we
+   hem hier met de hand tot je er met de muis overheen gaat. */
+.tease-card.groep .tc-foot { visibility: hidden; }
+.tease-card.groep:hover .tc-foot { visibility: visible; }
+.tease-card.groep:hover { z-index: 5; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.tease-card .tc-rollen {
+  position: absolute; left: -1.5px; right: -1.5px; top: 100%;
+  display: flex; flex-direction: column; gap: 3px;
+  background: #FFFDF8; border: 1.5px solid var(--clay); border-top: 0;
+  border-radius: 0 0 20px 20px; padding: 0 18px; max-height: 0; opacity: 0;
+  overflow: hidden; pointer-events: none; visibility: hidden;
+  box-shadow: 0 20px 46px rgba(19,53,42,.16);
+  transition: max-height .28s cubic-bezier(.2,.8,.3,1), opacity .18s, padding .28s;
+}
+.tease-card.groep:hover .tc-rollen {
+  max-height: 220px; opacity: 1; padding: 4px 18px 16px; visibility: visible;
+}
+.tease-card .tc-rollen span { font-size: 12.5px; color: #6B7065; line-height: 1.45; text-align: center; }
+.groep-rollen { display: flex; flex-direction: column; gap: 9px; margin: 4px 0 2px; }
+.groep-rol {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%;
+  text-align: left; background: #fff; border: 1px solid #ECECEC; border-radius: 12px;
+  padding: 12px 14px; cursor: pointer; font: inherit; transition: border-color .2s, transform .2s;
+}
+.groep-rol:hover { border-color: var(--green); transform: translateY(-1px); }
+.groep-rol b { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.groep-rol small { display: block; font-size: 12.5px; color: var(--muted-soft); margin-top: 2px; }
+.groep-rol .gaan {
+  font-size: 13px; font-weight: 700; color: var(--green); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px;
+}
