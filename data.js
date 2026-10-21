@@ -337,7 +337,10 @@ const PROGRAMME_CATS = [
   { id: "volunteer",  label: "Volunteering" },
   { id: "youth",      label: "Youth organisations" },
   { id: "impact",     label: "Impact-driven" },
-  { id: "university", label: "Other universities" },
+  // Programma's van andere universiteiten staan er tijdelijk af, op verzoek.
+  // Zet deze regel terug en die in PROGRAMME_SHEETS hieronder, dan staat de
+  // categorie weer in het menu, op de programmapagina en in de tellingen.
+  // { id: "university", label: "Other universities" },
   { id: "paid",       label: "Paid programmes" },
   { id: "summer",     label: "Summer schools" },
 ];
@@ -378,7 +381,7 @@ const PROGRAMME_SHEETS = {
   volunteer:  tabblad(562032160),    // tabblad "Volunteer work"
   youth:      tabblad(1221317339),   // tabblad "Youth Organizations"
   impact:     tabblad(1914001672),   // tabblad "Impact Driven Programmes"
-  university: tabblad(1861492196),   // tabblad "Programs from other university"
+  // university: tabblad(1861492196),   // tabblad "Programs from other university" (staat uit)
   paid:       tabblad(1646247199),   // tabblad "Paid Impact Programmes"
   summer:     tabblad(6575484),      // tabblad "Summer School Programmes"
 
