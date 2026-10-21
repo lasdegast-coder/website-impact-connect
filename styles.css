@@ -1677,3 +1677,6 @@ body::before {
 }
 #rec-tekst:focus { outline: none; border-color: var(--green); }
 #rec-jaarvak { margin-top: 4px; }
+
+/* De spamregel hoort bij het mailveld erboven, dus hij sluit er strak op aan. */
+.form-stack .form-note.let-op { margin-top: 9px; }

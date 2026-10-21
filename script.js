@@ -1775,12 +1775,14 @@ function openForm() {
     }
     return `<div class="form-stack">
       <div><label>${t("form.naam")}</label><input id="f-name" placeholder="${esc(t("form.naam.hint"))}" value="${esc(data.name)}"></div>
-      <div><label>${t("form.email")}</label><input id="f-email" placeholder="you@mail.com" value="${esc(data.email)}"></div>
+      ${/* De spamregel staat met opzet hier, vlak onder het mailveld, en niet
+            onderaan het formulier: je leest hem op het moment dat je je adres
+            invult. Bevestigingen belanden bij universiteitsadressen vaak in de
+            spam, en dan denkt een student dat zijn afspraak niet doorkwam. */""}
+      <div><label>${t("form.email")}</label><input id="f-email" placeholder="you@mail.com" value="${esc(data.email)}">
+        <p class="form-note let-op">${icon("Mail", 13)}<span>${t("form.spam")}</span></p></div>
       <div><label>${t("afspr.rest")} <span style="font-weight:400;color:#999">${t("form.optioneel")}</span></label>
         <textarea id="f-notes" rows="3" placeholder="${esc(t("afspr.rest.hint"))}">${esc(data.notes)}</textarea></div>
-      ${/* Bevestigingen belanden bij universiteitsadressen vaak in de spam,
-            en dan denkt een student dat zijn afspraak niet is doorgekomen. */""}
-      <p class="form-note let-op">${icon("Mail", 13)}<span>${t("form.spam")}</span></p>
       <p class="form-note">${t("afspr.privacy")}</p>
     </div>`;
   }
